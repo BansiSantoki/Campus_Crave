@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import StallOwnerRegister from "./pages/StallOwnerRegister";
 import ForgotPassword from "./pages/ForgotPassword";
 import StudentDashboard from "./pages/Students_pages/StudentDashboard";
 import StallDashboard from "./pages/Stall_Owner/StallDashboard";
@@ -9,6 +10,7 @@ import "./App.css";
 import ViewStalls from "./pages/Students_pages/ViewStall";
 import BrowseMenu from "./pages/Students_pages/BrowseMenu";
 import PlaceOrder from "./pages/Students_pages/PlaceOrder";
+import Orders from "./pages/Students_pages/Orders";
 import Profile from "./pages/Students_pages/Profile";
 import ManageMenuItems from "./pages/Stall_Owner/ManageMenuItems";
 import IncomingOrders from "./pages/Stall_Owner/IncomingOrders";
@@ -25,6 +27,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/register/stall-owner" element={<StallOwnerRegister />} />
         <Route path="/forgot" element={<ForgotPassword />} />
         
         {/* Admin */}
@@ -38,7 +41,8 @@ export default function App() {
         <Route path="/student" element={<StudentDashboard />} />
         <Route path="/stalls" element={<ViewStalls/>}/>
         <Route path="/menu" element={<BrowseMenu/>} />
-        <Route path="/orders" element={<PlaceOrder/>} />
+        <Route path="/cart" element={<PlaceOrder/>} />
+        <Route path="/orders" element={<Orders/>} />
         <Route path="/profile" element={<Profile/>} />
         {/* Stall Owner */}
         <Route path="/stall" element={<StallDashboard/>} />
