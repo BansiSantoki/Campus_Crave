@@ -300,3 +300,30 @@ td {
   outline: none;
   box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
 }
+
+/* ================= AUTH RESPONSIVE ================= */
+@media (max-width: 768px) {
+  .auth-wrapper {
+    padding: 20px 14px;
+    align-items: flex-start;
+  }
+
+  .auth-card {
+    width: 100%;
+    max-width: 460px;
+    padding: 24px 18px;
+    margin: 0 auto;
+  }
+
+  .row,
+  .role-select {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  input,
+  select,
+  .gradient-btn {
+    font-size: 15px;
+  }
+}
