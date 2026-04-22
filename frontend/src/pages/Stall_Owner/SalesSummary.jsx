@@ -1,19 +1,120 @@
-import { Link } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { clearCurrentUser, getCurrentUser, getDisplayName } from "../../utils/appData";
+import { fetchOrdersByStall } from "../../utils/orderApi";
+import { resolveStallForOwner } from "../../utils/stallApi";
+
 export default function SalesSummary() {
-    const navigate = useNavigate();
-    const handleLogout = () => {
-  // Optional: remove login data
-  localStorage.removeItem("user");
+  const navigate = useNavigate();
+  const currentUser = getCurrentUser();
 
-  // Redirect to login page
-  navigate("/");
-};
+  const [stall, setStall] = useState(null);
+  const [stallLoading, setStallLoading] = useState(true);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [lastSyncedAt, setLastSyncedAt] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadAssignedStall = async () => {
+      setStallLoading(true);
+      const resolvedStall = await resolveStallForOwner(currentUser);
+      if (!isMounted) {
+        return;
+      }
+      setStall(resolvedStall || null);
+      setStallLoading(false);
+    };
+
+    loadAssignedStall();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentUser?.email, currentUser?.stallName]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadOrders = async () => {
+      if (!stall?.id && !stall?._id) {
+        if (isMounted) {
+          setOrders([]);
+          setLoading(false);
+        }
+        return;
+      }
+
+      setLoading(true);
+      const result = await fetchOrdersByStall(String(stall._id || stall.id));
+      if (isMounted) {
+        setOrders(Array.isArray(result?.orders) ? result.orders : []);
+        setLastSyncedAt(new Date());
+        setLoading(false);
+      }
+    };
+
+    loadOrders();
+    const intervalId = setInterval(loadOrders, 5000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, [stall?.id, stall?._id]);
+
+  const report = useMemo(() => {
+    const now = new Date();
+    const todayOrders = orders.filter((order) => {
+      const createdAt = new Date(order.createdAt || Date.now());
+      return createdAt.toDateString() === now.toDateString();
+    });
+
+    const totalRevenue = orders.reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
+    const todayRevenue = todayOrders.reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
+    const totalItemsSold = orders.reduce((sum, order) => sum + Number(order.totalItems || order.qty || 0), 0);
+    const avgOrderValue = orders.length ? totalRevenue / orders.length : 0;
+
+    const itemMap = new Map();
+    orders.forEach((order) => {
+      order.items.forEach((item) => {
+        const itemName = item.itemName || item.name || "Menu Item";
+        const current = itemMap.get(itemName) || { quantity: 0, revenue: 0 };
+        const quantity = Number(item.quantity || 0);
+        const revenue = Number(item.totalPrice || Number(item.price || 0) * quantity);
+        itemMap.set(itemName, {
+          quantity: current.quantity + quantity,
+          revenue: current.revenue + revenue,
+        });
+      });
+    });
+
+    const topItems = [...itemMap.entries()]
+      .map(([name, value]) => ({ name, ...value }))
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 5);
+
+    return {
+      todayOrders: todayOrders.length,
+      todayRevenue,
+      avgOrderValue,
+      totalItemsSold,
+      totalOrders: orders.length,
+      totalRevenue,
+      topItems,
+    };
+  }, [orders]);
+
+  const handleLogout = () => {
+    clearCurrentUser();
+    navigate("/");
+  };
+
+  const ownerName = getDisplayName(currentUser);
+
   return (
-    
     <div className="dashboard-container">
-
-      {/* Sidebar */}
       <aside className="sidebar">
         <div className="brand">
           <div className="brand-logo">CC</div>
@@ -32,206 +133,94 @@ export default function SalesSummary() {
         </ul>
       </aside>
 
-
-      {/* MAIN */}
       <main className="main">
-
-        {/* Header */}
         <div className="header">
           <div>
             <p className="back-link">← Back to Dashboard</p>
             <h2>Sales Summary</h2>
             <span className="sub-text">
-              Track your stall's performance and revenue
+              {lastSyncedAt
+                ? `Track your stall performance - live sync ${lastSyncedAt.toLocaleTimeString()}`
+                : "Track your stall's performance and revenue"}
             </span>
           </div>
 
           <div className="user-box">
             <div className="user-details">
-              <p>South Indian Stall</p>
-              <span>Owner: Ravi Kumar</span>
+              <p>{stallLoading ? "Loading stall..." : stall?.stallName || "Assigned Stall"}</p>
+              <span>{`Owner: ${ownerName}`}</span>
             </div>
-
-            <button className="logout" onClick={handleLogout}>
-                Logout
-                </button>
+            <button className="logout" onClick={handleLogout}>Logout</button>
           </div>
         </div>
 
+        {loading && <p className="sub-text">Loading sales data...</p>}
 
-        {/* Filter */}
-        <div className="sales-filter">
-          <select>
-            <option>Today</option>
-            <option>This Week</option>
-            <option>This Month</option>
-          </select>
-
-          <button className="export-btn">Export Report</button>
-        </div>
-
-
-        {/* Stats Cards */}
         <div className="sales-stats">
-
           <div className="sales-card">
             <p>Today's Orders</p>
-            <h2>169</h2>
-            <span className="green-text">↑ 12% from yesterday</span>
+            <h2>{report.todayOrders}</h2>
+            <span className="green-text">Live from current stall orders</span>
           </div>
 
           <div className="sales-card">
             <p>Today's Revenue</p>
-            <h2 className="green">₹13,260</h2>
-            <span className="green-text">↑ 8% from yesterday</span>
+            <h2 className="green">{`Rs. ${report.todayRevenue.toFixed(2)}`}</h2>
+            <span className="green-text">Updated every few seconds</span>
           </div>
 
           <div className="sales-card">
             <p>Avg Order Value</p>
-            <h2 className="purple">₹78</h2>
-            <span className="red-text">↓ 3% from yesterday</span>
+            <h2 className="purple">{`Rs. ${report.avgOrderValue.toFixed(2)}`}</h2>
+            <span className="sub-text">Based on total completed + active orders</span>
           </div>
 
           <div className="sales-card">
             <p>Items Sold</p>
-            <h2 className="orange">394</h2>
-            <span className="green-text">↑ 15% from yesterday</span>
+            <h2 className="orange">{report.totalItemsSold}</h2>
+            <span className="green-text">Across all time</span>
           </div>
-
         </div>
 
-
-        {/* Charts Section */}
         <div className="sales-grid">
-
-          {/* Hourly Sales */}
           <div className="sales-box">
-
-            <h3>Hourly Sales Today</h3>
-
-            <div className="progress-row">
-              <span>08:00 AM</span>
-              <div className="progress-bar"><div style={{width:"40%"}}></div></div>
-              <small>12 orders · ₹850</small>
-            </div>
-
-            <div className="progress-row">
-              <span>09:00 AM</span>
-              <div className="progress-bar"><div style={{width:"60%"}}></div></div>
-              <small>18 orders · ₹1240</small>
-            </div>
-
-            <div className="progress-row">
-              <span>10:00 AM</span>
-              <div className="progress-bar"><div style={{width:"70%"}}></div></div>
-              <small>24 orders · ₹1680</small>
-            </div>
-
-            <div className="progress-row">
-              <span>11:00 AM</span>
-              <div className="progress-bar"><div style={{width:"85%"}}></div></div>
-              <small>35 orders · ₹2450</small>
-            </div>
-
-            <div className="progress-row">
-              <span>12:00 PM</span>
-              <div className="progress-bar"><div style={{width:"95%"}}></div></div>
-              <small>42 orders · ₹3150</small>
-            </div>
-
-          </div>
-
-
-          {/* Top Selling */}
-          <div className="sales-box">
-
             <h3>Top Selling Items</h3>
-
             <ul className="top-items">
+              {report.topItems.map((item, index) => (
+                <li key={item.name}>
+                  <span className="rank">{index + 1}</span>
+                  <div>
+                    <strong>{item.name}</strong>
+                    <p>{`${item.quantity} sold`}</p>
+                  </div>
+                  <span className="price">{`Rs. ${item.revenue.toFixed(2)}`}</span>
+                </li>
+              ))}
 
-              <li>
-                <span className="rank">1</span>
-                <div>
-                  <strong>Masala Dosa</strong>
-                  <p>124 sold</p>
-                </div>
-                <span className="price">₹6200</span>
-              </li>
-
-              <li>
-                <span className="rank">2</span>
-                <div>
-                  <strong>Idli Sambar</strong>
-                  <p>98 sold</p>
-                </div>
-                <span className="price">₹3920</span>
-              </li>
-
-              <li>
-                <span className="rank">3</span>
-                <div>
-                  <strong>Vada Sambar</strong>
-                  <p>76 sold</p>
-                </div>
-                <span className="price">₹2660</span>
-              </li>
-
-              <li>
-                <span className="rank">4</span>
-                <div>
-                  <strong>Uttapam</strong>
-                  <p>54 sold</p>
-                </div>
-                <span className="price">₹2970</span>
-              </li>
-
-              <li>
-                <span className="rank">5</span>
-                <div>
-                  <strong>Upma</strong>
-                  <p>42 sold</p>
-                </div>
-                <span className="price">₹1260</span>
-              </li>
-
+              {report.topItems.length === 0 && <li>No items sold yet.</li>}
             </ul>
-
           </div>
 
-        </div>
-
-
-        {/* Monthly Overview */}
-        <div className="monthly-overview">
-
-          <h3>Monthly Overview (January 2026)</h3>
-
-          <div className="monthly-cards">
-
-            <div className="month-card blue">
-              <p>Total Orders</p>
-              <h2>3,567</h2>
+          <div className="sales-box">
+            <h3>Stall Overview</h3>
+            <div className="progress-row">
+              <span>Total Orders</span>
+              <small>{report.totalOrders}</small>
             </div>
-
-            <div className="month-card green">
-              <p>Total Revenue</p>
-              <h2>₹2,78,430</h2>
+            <div className="progress-row">
+              <span>Total Revenue</span>
+              <small>{`Rs. ${report.totalRevenue.toFixed(2)}`}</small>
             </div>
-
-            <div className="month-card purple">
-              <p>Avg Daily Sales</p>
-              <h2>₹16,378</h2>
+            <div className="progress-row">
+              <span>Today's Orders</span>
+              <small>{report.todayOrders}</small>
             </div>
-
-            <div className="month-card orange">
-              <p>Items Sold</p>
-              <h2>8,234</h2>
+            <div className="progress-row">
+              <span>Today's Revenue</span>
+              <small>{`Rs. ${report.todayRevenue.toFixed(2)}`}</small>
             </div>
-
           </div>
-
         </div>
-
       </main>
     </div>
   );

@@ -2,7 +2,7 @@
 
 body {
   font-family: Arial, sans-serif;
-  background: #f5f6fa;
+  background: #f1f8f3;
   margin: 0;
 }
 
@@ -16,18 +16,18 @@ body {
 }
 
 .auth-card {
-  width: 420px;
-  background: white;
-  padding: 35px;
+  width: 460px;
+  background: linear-gradient(165deg, #cfead8 0%, #b6dec6 55%, #a5d2b8 100%);
+  padding: 42px;
   border-radius: 14px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  box-shadow: 0 12px 30px rgba(12, 69, 42, 0.2);
   text-align: center;
 }
 
 .icon-circle {
   width: 75px;
   height: 75px;
-  background: linear-gradient(to right, #28a745, #ff7a00);
+  background: linear-gradient(to right, #28a745, #149e62);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -73,7 +73,7 @@ input:focus, select:focus {
 .gradient-btn {
   width: 100%;
   padding: 13px;
-  background: linear-gradient(to right, #28a745, #ff7a00);
+  background: linear-gradient(to right, #28a745, #149e62);
   border: none;
   color: white;
   font-weight: bold;
@@ -92,7 +92,7 @@ input:focus, select:focus {
 }
 
 .bottom-text a {
-  color: #007bff;
+  color: #16884f;
   text-decoration: none;
 }
 
@@ -107,9 +107,9 @@ input:focus, select:focus {
 
 .sidebar {
   width: 240px;
-  background: #ffffff;
+  background: linear-gradient(180deg, #f8fdf9 0%, #eef9f2 100%);
   padding: 20px;
-  border-right: 1px solid #e0e0e0;
+  border-right: 1px solid #d3e8da;
 }
 
 .sidebar h3 {
@@ -137,7 +137,7 @@ input:focus, select:focus {
 }
 
 .sidebar a.active {
-  background: #2f6fed;
+  background: #16c47f;
   color: white;
 }
 
@@ -147,22 +147,22 @@ input:focus, select:focus {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #f5f6fa;
+  background: #f1f8f3;
 }
 
 /* ===== TOPBAR ===== */
 
 .topbar {
-  background: white;
+  background: #f5fbf7;
   padding: 15px 25px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid #d3e8da;
 }
 
 .logout-btn {
-  background: #ff4d4f;
+  background: linear-gradient(135deg, #149e62, #0f7f4f);
   color: white;
   border: none;
   padding: 8px 15px;
@@ -171,7 +171,7 @@ input:focus, select:focus {
 }
 
 .logout-btn:hover {
-  opacity: 0.9;
+  filter: brightness(0.94);
 }
 
 /* ===== CONTENT ===== */
@@ -190,10 +190,10 @@ input:focus, select:focus {
 
 .card {
   flex: 1;
-  background: white;
+  background: #eef8f2;
   padding: 20px;
   border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 15px rgba(15, 77, 49, 0.08);
 }
 
 .card p {
@@ -211,13 +211,13 @@ table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 20px;
-  background: white;
+  background: #f6fcf8;
   border-radius: 8px;
   overflow: hidden;
 }
 
 th {
-  background: #f5f6fa;
+  background: #eaf6ef;
   padding: 12px;
 }
 
@@ -229,7 +229,7 @@ td {
 /* ================= BUTTONS ================= */
 
 .add-btn {
-  background: #007bff;
+  background: #16c47f;
   color: white;
   padding: 8px 14px;
   border: none;
@@ -238,7 +238,7 @@ td {
 }
 
 .edit-btn {
-  background: orange;
+  background: #27a064;
   color: white;
   margin-right: 5px;
   border: none;
@@ -263,7 +263,7 @@ td {
 }
 
 .report-box {
-  background: white;
+  background: #eef8f2;
   padding: 20px;
   margin-top: 20px;
   border-radius: 8px;
@@ -326,4 +326,107 @@ td {
   .gradient-btn {
     font-size: 15px;
   }
+}
+
+/* Final theme override: keep all app screens and major surfaces light green */
+html,
+body,
+#root,
+.dashboard-container,
+.admin-container,
+.main,
+.main-content,
+.content,
+.auth-wrapper {
+  background: #c1e1cc !important;
+}
+
+.sidebar,
+.orders-box,
+.stat-card,
+.stall-card,
+.food-card,
+.cart-box,
+.pickup-box,
+.summary-box,
+.profile-card,
+.profile-box,
+.sales-box,
+.monthly-overview,
+.report-card,
+.menu-stat-card,
+.stall-stat-card,
+.admin-card,
+.card,
+.auth-card,
+.topbar,
+.navbar,
+.stall-filter,
+.menu-search,
+.category-filter,
+.table-filters,
+.modal,
+table {
+  background: #ffffff !important;
+}
+
+th {
+  background: #ffffff !important;
+}
+
+/* Ensure logout buttons are always green across all pages */
+button.logout,
+.logout,
+button.logout-btn,
+.logout-btn {
+  background: linear-gradient(135deg, #149e62, #0f7f4f) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+button.logout:hover,
+.logout:hover,
+button.logout-btn:hover,
+.logout-btn:hover {
+  filter: brightness(0.94) !important;
+}
+
+/* Keep menu/cart action buttons green across pages */
+.view-btn,
+.add-cart,
+.btn-view {
+  background: linear-gradient(135deg, #149e62, #0f7f4f) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+.view-btn:hover,
+.add-cart:hover,
+.btn-view:hover {
+  filter: brightness(0.94) !important;
+}
+
+/* Slightly larger typography across pages */
+body {
+  font-size: 16px;
+}
+
+.nav-links a,
+.sidebar a,
+.nav-item,
+.sub-text,
+.bottom-text,
+input,
+select,
+textarea,
+button,
+th,
+td,
+.badge {
+  font-size: 15px !important;
+}
+
+h2,
+h3 {
+  font-size: 1.15em;
 }

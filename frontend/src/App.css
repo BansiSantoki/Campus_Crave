@@ -856,11 +856,11 @@ margin-top:6px;
 }
 
 .stall-stat-card.new h2{
-color:#ff7a00;
+color:#1f955f;
 }
 
 .stall-stat-card.preparing h2{
-color:#f59e0b;
+color:#149e62;
 }
 
 .stall-stat-card.revenue h2{
@@ -880,7 +880,7 @@ cursor:pointer;
 }
 
 .prepare-btn{
-background:#f59e0b;
+background:#149e62;
 color:white;
 border:none;
 padding:6px 12px;
@@ -892,13 +892,13 @@ cursor:pointer;
 /* STATUS BADGES */
 
 .badge.blue{
-background:#e8f0ff;
-color:#1677ff;
+background:#e6f8ee;
+color:#1f955f;
 }
 
 .badge.orange{
-background:#fff3e6;
-color:#ff7a00;
+background:#e6f8ee;
+color:#1f955f;
 }
 
 
@@ -914,7 +914,7 @@ flex-direction:column;
 /* ================= MANAGE MENU PAGE ================= */
 
 .add-item-btn{
-background:#ff6a00;
+background:#149e62;
 color:white;
 border:none;
 padding:10px 16px;
@@ -1028,13 +1028,13 @@ font-size:14px;
 /* Status */
 
 .badge.blue{
-background:#e8f0ff;
-color:#1677ff;
+background:#e6f8ee;
+color:#1f955f;
 }
 
 .badge.orange{
-background:#fff3e6;
-color:#ff7a00;
+background:#e6f8ee;
+color:#1f955f;
 }
 
 
@@ -1050,7 +1050,7 @@ cursor:pointer;
 }
 
 .prepare-btn{
-background:#f59e0b;
+background:#149e62;
 color:white;
 border:none;
 padding:6px 12px;
@@ -1072,7 +1072,7 @@ border:1px solid #ddd;
 }
 
 .export-btn{
-background:#ff6a00;
+background:#149e62;
 color:white;
 border:none;
 padding:8px 14px;
@@ -1099,8 +1099,8 @@ box-shadow:0 2px 8px rgba(0,0,0,0.05);
 }
 
 .green{color:#16c47f;}
-.purple{color:#8b5cf6;}
-.orange{color:#f97316;}
+.purple{color:#149e62;}
+.orange{color:#1f955f;}
 
 .green-text{color:#16c47f;font-size:12px;}
 .red-text{color:#ff4d4f;font-size:12px;}
@@ -1140,7 +1140,7 @@ overflow:hidden;
 
 .progress-bar div{
 height:100%;
-background:linear-gradient(90deg,#16c47f,#ff6a00);
+background:linear-gradient(90deg,#16c47f,#149e62);
 }
 
 /* TOP ITEMS */
@@ -1194,8 +1194,8 @@ text-align:center;
 
 .month-card.blue{background:#e8f0ff;}
 .month-card.green{background:#e6f9f0;}
-.month-card.purple{background:#f3e8ff;}
-.month-card.orange{background:#fff3e6;}
+.month-card.purple{background:#e7f6ee;}
+.month-card.orange{background:#def2e7;}
 
 /* RESPONSIVE */
 
@@ -1240,11 +1240,11 @@ margin-top:6px;
 }
 
 .admin-card.orange h2{
-color:#ff6a00;
+color:#1f955f;
 }
 
 .admin-card.purple h2{
-color:#8b5cf6;
+color:#149e62;
 }
 
 .admin-card.green h2{
@@ -1254,7 +1254,7 @@ color:#16c47f;
 /* Active admin sidebar */
 
 .admin-sidebar .active a{
-background:#2563eb;
+background:#149e62;
 color:white;
 }
 
@@ -1698,6 +1698,407 @@ margin-bottom:10px;
     min-width: 680px;
   }
 
+
+/* ================= GREEN THEME POLISH ================= */
+
+:root {
+  --cc-bg: #eaf6ee;
+  --cc-bg-soft: #e3f2e8;
+  --cc-surface: #ffffff;
+  --cc-text: #113322;
+  --cc-text-muted: #4f6f60;
+  --cc-border: #d9ebdf;
+  --cc-primary: #149e62;
+  --cc-primary-strong: #0f7f4f;
+  --cc-primary-soft: #ddf6e8;
+  --cc-warn: #6ba96a;
+  --cc-danger: #c84b4b;
+  --cc-shadow: 0 12px 30px rgba(19, 74, 50, 0.1);
+  --cc-shadow-soft: 0 6px 18px rgba(15, 65, 44, 0.08);
+}
+
+body {
+  font-family: "Poppins", "Nunito Sans", "Trebuchet MS", sans-serif;
+  color: var(--cc-text);
+  background:
+    radial-gradient(circle at 12% 8%, #dff8ea 0%, transparent 35%),
+    radial-gradient(circle at 85% 18%, #eafde9 0%, transparent 42%),
+    linear-gradient(180deg, #eff9f2 0%, #e6f3ea 100%);
+}
+
+html,
+body,
+#root,
+.dashboard-container,
+.admin-container {
+  background-color: var(--cc-bg);
+}
+
+.main,
+.main-content,
+.auth-wrapper {
+  background-color: var(--cc-bg-soft);
+}
+
+a,
+.back-link,
+.bottom-text a {
+  color: var(--cc-primary-strong);
+}
+
+a:hover,
+.back-link:hover,
+.bottom-text a:hover {
+  color: var(--cc-primary);
+}
+
+.auth-wrapper {
+  padding: 26px;
+  background:
+    radial-gradient(circle at 8% 8%, rgba(20, 158, 98, 0.15) 0%, transparent 34%),
+    radial-gradient(circle at 92% 25%, rgba(107, 169, 106, 0.12) 0%, transparent 40%);
+}
+
+.auth-choice-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-card {
+  background: linear-gradient(165deg, #cfead8 0%, #b6dec6 55%, #a5d2b8 100%);
+  border: 1px solid var(--cc-border);
+  border-radius: 18px;
+  box-shadow: 0 12px 30px rgba(12, 69, 42, 0.2);
+}
+
+.auth-choice-card {
+  max-width: 920px;
+  width: 100%;
+}
+
+.register-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 16px 0 8px;
+}
+
+.register-choice-card {
+  text-decoration: none;
+  background: linear-gradient(150deg, #f9fffc 0%, #f0faf4 60%, #eaf8ef 100%);
+  border: 1px solid #d0ead9;
+  border-radius: 14px;
+  padding: 16px;
+  color: #133828;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.register-choice-card h3 {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.register-choice-card p {
+  font-size: 13px;
+  color: #476b58;
+  margin-bottom: 14px;
+  line-height: 1.45;
+}
+
+.register-choice-card span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f7f4f;
+}
+
+.register-choice-card:hover {
+  transform: translateY(-2px);
+  border-color: #89d3aa;
+  box-shadow: 0 10px 20px rgba(15, 95, 55, 0.12);
+}
+
+@media (max-width: 760px) {
+  .register-choice-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.icon-circle,
+.brand-logo {
+  background: linear-gradient(135deg, var(--cc-primary), #3daf7e);
+}
+
+input,
+select,
+textarea {
+  border: 1px solid #cfe5d7;
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--cc-text);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--cc-primary);
+  box-shadow: 0 0 0 3px rgba(20, 158, 98, 0.15);
+}
+
+.sidebar,
+.orders-box,
+.cart-box,
+.pickup-box,
+.summary-box,
+.profile-card,
+.profile-box,
+.sales-box,
+.monthly-overview,
+.report-card,
+.stall-card,
+.food-card,
+.menu-stat-card,
+.stall-stat-card,
+.admin-card,
+.auth-card,
+.modal,
+.stall-filter,
+.menu-search,
+.category-filter,
+.table-filters {
+  border: 1px solid var(--cc-border);
+  box-shadow: var(--cc-shadow-soft);
+}
+
+.sidebar {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fefb 100%);
+}
+
+.nav-links a {
+  color: #2a4b3c;
+}
+
+.nav-links a:hover {
+  background: var(--cc-primary-soft);
+}
+
+.nav-links .active a,
+.admin-sidebar .active a {
+  background: linear-gradient(135deg, var(--cc-primary), #26ab72) !important;
+  color: #ffffff;
+}
+
+.main {
+  background: transparent;
+}
+
+th {
+  background: #f2faf5;
+  color: #2f5a46;
+}
+
+td {
+  border-top: 1px solid #e4f2e9;
+}
+
+.gradient-btn,
+.search-btn,
+.add-btn,
+.add-item-btn,
+.save-btn,
+.place-order-btn,
+.ready-btn,
+.prepare-btn,
+.add-cart,
+.view-btn,
+.edit-btn,
+.export-btn,
+.order-btn,
+.upload-btn,
+.btn-view {
+  background: linear-gradient(135deg, var(--cc-primary), #2fb67b) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+.gradient-btn:hover,
+.search-btn:hover,
+.add-btn:hover,
+.add-item-btn:hover,
+.save-btn:hover,
+.place-order-btn:hover,
+.ready-btn:hover,
+.prepare-btn:hover,
+.add-cart:hover,
+.view-btn:hover,
+.edit-btn:hover,
+.export-btn:hover,
+.order-btn:hover,
+.upload-btn:hover,
+.btn-view:hover {
+  transform: translateY(-1px);
+  filter: brightness(0.96);
+}
+
+.cancel-btn,
+.close-modal-btn {
+  background: #e6efe9 !important;
+  color: #214332 !important;
+  border: 1px solid #cfe1d7 !important;
+}
+
+.logout,
+.logout-btn {
+  background: linear-gradient(135deg, #149e62, #0f7f4f) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+.logout:hover,
+.logout-btn:hover {
+  filter: brightness(0.94);
+}
+
+.delete-btn,
+.badge.red {
+  background: #faeaea !important;
+  color: var(--cc-danger) !important;
+  border-color: #f1c4c4 !important;
+}
+
+.badge.green,
+.available,
+.open-badge {
+  background: var(--cc-primary-soft) !important;
+  color: var(--cc-primary-strong) !important;
+}
+
+.badge.orange,
+.badge.blue,
+.south,
+.snack,
+.category-tag,
+.cuisine-tag {
+  background: #e8f6ee !important;
+  color: #2a8e60 !important;
+}
+
+.price,
+.summary-row.total,
+.green,
+.orange,
+.purple,
+.green-text {
+  color: var(--cc-primary-strong) !important;
+}
+
+.red-text {
+  color: var(--cc-danger) !important;
+}
+
+.progress-bar {
+  background: #dbecdf;
+}
+
+.progress-bar div {
+  background: linear-gradient(90deg, var(--cc-primary), #55be88);
+}
+
+.food-image,
+.cart-img {
+  background: radial-gradient(circle at top left, #eefbf3, #dbf3e5 72%, #d1efdf);
+}
+
+.modal-overlay {
+  background: rgba(9, 42, 28, 0.42);
+  backdrop-filter: blur(2px);
+}
+
+.status-chip,
+.rank {
+  background: #e7f5ec;
+  color: #2a7d58;
+  border: 1px solid #d2e8da;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.table-responsive {
+  overflow-x: auto;
+}
+
+.mini-status-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.mini-status-item {
+  background: #f3fbf6;
+  border: 1px solid #d9ecdf;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #2d5542;
+}
+
+.admin-container,
+.main-content,
+.topbar,
+.logo,
+.nav-item,
+.navbar {
+  color: var(--cc-text);
+}
+
+.admin-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  background: transparent;
+}
+
+.topbar,
+.navbar {
+  background: #ffffff;
+  border: 1px solid var(--cc-border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: var(--cc-shadow-soft);
+}
+
+.nav-item {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+
+.nav-item.active,
+.nav-item:hover {
+  background: var(--cc-primary-soft);
+  color: var(--cc-primary-strong);
+}
+
+@media (max-width: 992px) {
+  .mini-status-list {
+    grid-template-columns: 1fr;
+  }
+}
   .modal {
     width: calc(100% - 24px);
   }
@@ -1754,4 +2155,68 @@ margin-bottom:10px;
   .view-details {
     padding: 14px;
   }
+}
+
+/* Force light-green surfaces across student, stall owner, and admin pages */
+.dashboard-container,
+.admin-container,
+.main,
+.main-content,
+.content,
+.auth-wrapper {
+  background: #eaf6ee !important;
+}
+
+.sidebar,
+.orders-box,
+.stat-card,
+.stall-card,
+.food-card,
+.cart-box,
+.pickup-box,
+.summary-box,
+.profile-card,
+.profile-box,
+.sales-box,
+.monthly-overview,
+.report-card,
+.menu-stat-card,
+.stall-stat-card,
+.admin-card,
+.card,
+.auth-card,
+.topbar,
+.navbar,
+.stall-filter,
+.menu-search,
+.category-filter,
+.table-filters,
+.modal,
+table {
+  background: #f1fbf4 !important;
+}
+
+th {
+  background: #e6f5eb !important;
+}
+
+/* Force action buttons to green theme */
+.view-btn,
+.add-cart,
+.btn-view {
+  background: linear-gradient(135deg, #149e62, #0f7f4f) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+.order-btn {
+  background: #ffffff !important;
+  color: #149e62 !important;
+  border: 1px solid #149e62 !important;
+}
+
+.view-btn:hover,
+.add-cart:hover,
+.btn-view:hover {
+  filter: brightness(0.94) !important;
 }
