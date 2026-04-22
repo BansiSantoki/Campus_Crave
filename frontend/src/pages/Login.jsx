@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { loginUser } from "../utils/authApi";
+import { setCurrentUser } from "../utils/appData";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -8,10 +10,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
-  const [submitted, setSubmitted] = useState(false);
-
-  const adminEmail = "admin@campus.com";
-  const adminPassword = "admin123";
+  const [submitting, setSubmitting] = useState(false);
 
   const validateForm = () => {
     const newErrors = {};
@@ -19,7 +18,7 @@ export default function Login() {
     // Email validation
     if (!email.trim()) {
       newErrors.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       newErrors.email = "Please enter a valid email address";
     }
 
@@ -33,34 +32,46 @@ export default function Login() {
     return newErrors;
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e?.preventDefault();
     const newErrors = validateForm();
     setErrors(newErrors);
-    setSubmitted(true);
 
     if (Object.keys(newErrors).length > 0) {
       return;
     }
 
-    if (email === adminEmail && password === adminPassword) {
-      navigate("/admin");
-      return;
+    try {
+      setSubmitting(true);
+      const loginValue = email.trim();
+      const payload = await loginUser({
+        email: loginValue.toLowerCase(),
+        password,
+      });
+
+      const user = payload?.user;
+      if (!user) {
+        setErrors({ submit: "Login failed. User data not found." });
+        return;
+      }
+
+      setCurrentUser(user);
+
+      const role = String(user.role || "").toLowerCase();
+      if (role === "admin") {
+        navigate("/admin");
+        return;
+      }
+      if (role === "stall") {
+        navigate("/stall");
+        return;
+      }
+      navigate("/student");
+    } catch (error) {
+      setErrors({ submit: error.message || "Invalid credentials" });
+    } finally {
+      setSubmitting(false);
     }
-
-    const users = JSON.parse(localStorage.getItem("users")) || [];
-
-    const user = users.find(
-      (u) => u.email === email && u.password === password
-    );
-
-    if (!user) {
-      setErrors({ submit: "Invalid credentials" });
-      return;
-    }
-
-    if (user.role === "student") navigate("/student");
-    if (user.role === "stall") navigate("/stall");
   };
 
   return (
@@ -75,8 +86,8 @@ export default function Login() {
 
         <div>
           <input
-            type="email"
-            placeholder="your.email@college.edu"
+            type="text"
+            placeholder="Email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className={errors.email ? "input-error" : ""}
@@ -105,8 +116,8 @@ export default function Login() {
           {errors.password && <span className="field-error">{errors.password}</span>}
         </div>
 
-        <button className="gradient-btn" onClick={handleLogin}>
-          Login
+        <button className="gradient-btn" onClick={handleLogin} disabled={submitting}>
+          {submitting ? "Logging in..." : "Login"}
         </button>
 
         <p className="bottom-text">
@@ -114,7 +125,7 @@ export default function Login() {
         </p>
 
         <p className="bottom-text">
-          Don't have an account? <Link to="/register">Register here</Link>
+          Don't have an account? <Link to="/register">Choose registration type</Link>
         </p>
       </div>
     </div>

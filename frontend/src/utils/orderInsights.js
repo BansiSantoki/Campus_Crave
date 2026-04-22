@@ -7,8 +7,8 @@ const STATUS_LABELS = {
 };
 
 const STATUS_TONES = {
-  New: "blue",
-  Preparing: "orange",
+  New: "green",
+  Preparing: "green",
   Ready: "green",
   Completed: "gray",
   Cancelled: "red",
@@ -26,11 +26,20 @@ export function formatCurrency(amount) {
   return `Rs. ${Number(amount || 0).toFixed(2)}`;
 }
 
+function resolveOrderStatus(order) {
+  const rawStatus = String(order?.status || order?.orderStatus || "New").trim();
+  if (rawStatus === "Accepted") {
+    return "Preparing";
+  }
+  return rawStatus || "New";
+}
+
 export function getOrderSummary(orders = []) {
   const todayKey = new Date().toDateString();
   const statusCounts = orders.reduce(
     (counts, order) => {
-      counts[order.status || "New"] = (counts[order.status || "New"] || 0) + 1;
+      const status = resolveOrderStatus(order);
+      counts[status] = (counts[status] || 0) + 1;
       return counts;
     },
     { New: 0, Preparing: 0, Ready: 0, Completed: 0, Cancelled: 0 }
@@ -51,6 +60,9 @@ export function getOrderSummary(orders = []) {
   );
   const whatsappSentCount = orders.filter((order) => Boolean(order.whatsappSent)).length;
   const paymentCompletedCount = orders.filter((order) => order.paymentStatus === "Completed").length;
+  const generatedBillCount = orders.filter(
+    (order) => Boolean(order.billPdfUrl || order.billPdfFileName),
+  ).length;
 
   return {
     totalOrders: orders.length,
@@ -61,6 +73,7 @@ export function getOrderSummary(orders = []) {
     todayItems,
     whatsappSentCount,
     paymentCompletedCount,
+    generatedBillCount,
     newOrders: statusCounts.New || 0,
     preparingOrders: statusCounts.Preparing || 0,
     readyOrders: statusCounts.Ready || 0,
@@ -96,8 +109,9 @@ export function getTopItems(orders = [], limit = 5) {
 
 export function getStallSummaries(orders = [], stalls = []) {
   const summaryMap = stalls.reduce((map, stall) => {
-    map[String(stall.id)] = {
-      stallId: stall.id,
+    const stallKey = String(stall.id || stall._id || "");
+    map[stallKey] = {
+      stallId: stall.id || stall._id,
       stallName: stall.stallName,
       stallOwner: stall.owner,
       orderCount: 0,
@@ -113,8 +127,18 @@ export function getStallSummaries(orders = [], stalls = []) {
 
   orders.forEach((order) => {
     const key = String(order.stallId || "");
-    if (!summaryMap[key]) {
-      summaryMap[key] = {
+    const nameKey = String(order.stallName || "").trim().toLowerCase();
+
+    let resolvedKey = key;
+    if (!summaryMap[resolvedKey] && nameKey) {
+      const byNameEntry = Object.entries(summaryMap).find(
+        ([, summary]) => String(summary.stallName || "").trim().toLowerCase() === nameKey
+      );
+      resolvedKey = byNameEntry?.[0] || resolvedKey;
+    }
+
+    if (!summaryMap[resolvedKey]) {
+      summaryMap[resolvedKey] = {
         stallId: order.stallId,
         stallName: order.stallName || "Unknown Stall",
         stallOwner: order.stallOwner || "N/A",
@@ -128,7 +152,7 @@ export function getStallSummaries(orders = [], stalls = []) {
       };
     }
 
-    const summary = summaryMap[key];
+    const summary = summaryMap[resolvedKey];
     summary.orderCount += 1;
     summary.revenue += Number(order.totalAmount || 0);
     summary.totalItems += Number(order.totalItems || order.qty || 0);

@@ -1,5 +1,7 @@
 import Stall from "../models/Stall.js";
 import MenuItem from "../models/MenuItem.js";
+import Review from "../models/Review.js";
+import { ensureCategoryExists } from "./Category.controller.js";
 import { recordActivity } from "../services/activityLogger.js";
 
 export const getAllStalls = async (_req, res) => {
@@ -88,7 +90,7 @@ export const updateStall = async (req, res) => {
     });
 
     const stall = await Stall.findByIdAndUpdate(req.params.id, updatePayload, {
-      new: true,
+      returnDocument: "after",
       runValidators: true,
     });
 
@@ -125,6 +127,7 @@ export const deleteStall = async (req, res) => {
     }
 
     await MenuItem.deleteMany({ stallId: String(stall._id) });
+    await Review.deleteMany({ stallId: String(stall._id) });
 
     await recordActivity({
       actorName: stall.owner,
@@ -170,6 +173,11 @@ export const getMenuItemsByStall = async (req, res) => {
 export const createMenuItem = async (req, res) => {
   try {
     const payload = req.body || {};
+    await ensureCategoryExists(payload.category, {
+      createdBy: payload.owner || "Stall Owner",
+      createdByEmail: payload.ownerEmail || "",
+    });
+
     const item = await MenuItem.create({
       stallId: String(payload.stallId),
       name: payload.name,
@@ -201,6 +209,13 @@ export const createMenuItem = async (req, res) => {
 export const updateMenuItem = async (req, res) => {
   try {
     const payload = req.body || {};
+    if (payload.category) {
+      await ensureCategoryExists(payload.category, {
+        createdBy: payload.owner || "Stall Owner",
+        createdByEmail: payload.ownerEmail || "",
+      });
+    }
+
     const updatePayload = {
       stallId: payload.stallId ? String(payload.stallId) : undefined,
       name: payload.name,
@@ -218,7 +233,7 @@ export const updateMenuItem = async (req, res) => {
     });
 
     const item = await MenuItem.findByIdAndUpdate(req.params.id, updatePayload, {
-      new: true,
+      returnDocument: "after",
       runValidators: true,
     });
 

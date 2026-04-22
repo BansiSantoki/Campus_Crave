@@ -38,6 +38,10 @@ const stallSchema = new mongoose.Schema(
       type: Number,
       default: 4.2,
     },
+    reviewsCount: {
+      type: Number,
+      default: 0,
+    },
     ordersCount: {
       type: Number,
       default: 0,

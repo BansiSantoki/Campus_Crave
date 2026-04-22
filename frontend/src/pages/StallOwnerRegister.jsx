@@ -17,6 +17,7 @@ export default function StallOwnerRegister() {
     role: "stall"
   });
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -68,13 +69,14 @@ export default function StallOwnerRegister() {
     if (Object.keys(newErrors).length > 0) return;
 
     try {
-      await registerUser({
+      setSubmitting(true);
+      const response = await registerUser({
         studentId: `OWN${Date.now().toString().slice(-6)}`,
-        firstName: form.firstName,
-        lastName: form.lastName,
-        stallName: form.stallName,
-        email: form.email,
-        phone: form.phone,
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        stallName: form.stallName.trim(),
+        email: form.email.trim().toLowerCase(),
+        phone: form.phone.trim(),
         department: form.cuisineType,
         year: "Owner",
         password: form.password,
@@ -82,10 +84,16 @@ export default function StallOwnerRegister() {
         role: "stall",
       });
 
-      alert("Stall Owner registered successfully!");
+      const verifyMessage = response?.verificationEmailSent
+        ? "Verification email sent successfully."
+        : response?.verificationEmailMessage || "Verification email not sent.";
+
+      alert(`Stall Owner registered successfully! ${verifyMessage}`);
       navigate("/");
     } catch (error) {
       setErrors({ submit: error.message || "Registration failed" });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -193,12 +201,16 @@ export default function StallOwnerRegister() {
           </div>
         </div>
 
-        <button className="gradient-btn" onClick={handleRegister}>
-          Register Stall Owner
+        <button className="gradient-btn" onClick={handleRegister} disabled={submitting}>
+          {submitting ? "Registering..." : "Register Stall Owner"}
         </button>
 
         <p className="bottom-text">
-          Are you a student? <Link to="/register">Register as Student</Link>
+          Are you a student? <Link to="/register/student">Register as Student</Link>
+        </p>
+
+        <p className="bottom-text">
+          Want to choose account type again? <Link to="/register">Go back</Link>
         </p>
 
         <p className="bottom-text">

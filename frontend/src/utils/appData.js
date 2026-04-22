@@ -128,6 +128,45 @@ const DEFAULT_STALLS = [
     hours: "10:30 AM - 8:30 PM",
     specialties: ["Meal Box", "Wrap Combo", "Snack Combo"],
     description: "Budget-friendly combo boxes designed for campus lunch rush."
+  },
+  {
+    id: 111,
+    stallName: "Tandoori Treats",
+    owner: "Harsh Patel",
+    contact: "9876543220",
+    cuisine: "North Indian",
+    status: "Active",
+    rating: 4.5,
+    ordersCount: 980,
+    hours: "11:00 AM - 9:00 PM",
+    specialties: ["Paneer Tikka", "Tandoori Roti", "Dal Fry"],
+    description: "Smoky tandoori dishes and rich North Indian gravies."
+  },
+  {
+    id: 112,
+    stallName: "Sizzle & Sip",
+    owner: "Riya Shah",
+    contact: "9876543221",
+    cuisine: "Beverages",
+    status: "Active",
+    rating: 4.7,
+    ordersCount: 1120,
+    hours: "9:00 AM - 8:00 PM",
+    specialties: ["Cold Coffee", "Mojito", "Protein Shake"],
+    description: "Refreshing drinks, shakes, and coolers for every mood."
+  },
+  {
+    id: 113,
+    stallName: "Wrap World",
+    owner: "Nikhil Rana",
+    contact: "9876543222",
+    cuisine: "Fast Food",
+    status: "Active",
+    rating: 4.4,
+    ordersCount: 875,
+    hours: "10:00 AM - 8:30 PM",
+    specialties: ["Paneer Wrap", "Chicken Wrap", "Fries Combo"],
+    description: "Loaded wraps and snack combos with quick service."
   }
 ];
 
@@ -224,7 +263,19 @@ const DEFAULT_MENU_ITEMS = [
   { id: 1803, stallId: 110, name: "Wrap Combo", category: "Combos", price: 169, description: "Wrap, chips and cooler", status: "Available" },
   { id: 1804, stallId: 110, name: "South Mini Combo", category: "Combos", price: 159, description: "Idli, mini dosa and filter coffee", status: "Available" },
   { id: 1805, stallId: 110, name: "Chinese Combo", category: "Combos", price: 189, description: "Noodles with manchurian and drink", status: "Available" },
-  { id: 1806, stallId: 110, name: "Sweet Treat Combo", category: "Combos", price: 139, description: "Pastry and shake combo", status: "Available" }
+  { id: 1806, stallId: 110, name: "Sweet Treat Combo", category: "Combos", price: 139, description: "Pastry and shake combo", status: "Available" },
+
+  { id: 1901, stallId: 111, name: "Paneer Tikka Platter", category: "North Indian", price: 140, description: "Smoky paneer tikka with mint chutney", status: "Available" },
+  { id: 1902, stallId: 111, name: "Dal Fry Combo", category: "North Indian", price: 120, description: "Dal fry with jeera rice and salad", status: "Available" },
+  { id: 1903, stallId: 111, name: "Butter Roti Basket", category: "North Indian", price: 55, description: "Fresh tandoori roti (3 pcs)", status: "Available" },
+
+  { id: 1951, stallId: 112, name: "Hazelnut Cold Coffee", category: "Beverages", price: 85, description: "Creamy hazelnut cold coffee", status: "Available" },
+  { id: 1952, stallId: 112, name: "Blue Lagoon", category: "Beverages", price: 75, description: "Lime mint blue cooler", status: "Available" },
+  { id: 1953, stallId: 112, name: "Protein Banana Shake", category: "Beverages", price: 95, description: "Banana peanut protein shake", status: "Available" },
+
+  { id: 1981, stallId: 113, name: "Spicy Paneer Wrap", category: "Fast Food", price: 110, description: "Grilled paneer with spicy mayo", status: "Available" },
+  { id: 1982, stallId: 113, name: "Peri Peri Chicken Wrap", category: "Fast Food", price: 135, description: "Juicy chicken wrap with peri peri", status: "Available" },
+  { id: 1983, stallId: 113, name: "Wrap + Fries Combo", category: "Combos", price: 160, description: "Any veg wrap with peri fries", status: "Available" }
 ];
 
 const DEFAULT_CATEGORIES = [
@@ -239,6 +290,21 @@ const DEFAULT_CATEGORIES = [
   "Street Food",
   "Combos"
 ];
+
+function normalizeCategory(category) {
+  if (!category) {
+    return null;
+  }
+
+  if (typeof category === "string") {
+    return category.trim();
+  }
+
+  return {
+    ...category,
+    name: String(category.name || "").trim(),
+  };
+}
 
 const CATEGORY_ICON_MAP = {
   "South Indian": "🥥",
@@ -361,44 +427,139 @@ function toImageQuery(text) {
     .replace(/\s+/g, " ");
 }
 
+function normalizeDishText(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/\d+/g, " ")
+    .replace(/[^a-z\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const GENERIC_ITEM_TERMS = new Set([
+  "combo",
+  "meal",
+  "item",
+  "food",
+  "special",
+  "plate",
+]);
+
+const CATEGORY_DISH_HINTS = {
+  "South Indian": "masala dosa",
+  "North Indian": "paneer butter masala",
+  Chinese: "hakka noodles",
+  "Fast Food": "cheese burger",
+  Beverages: "cold coffee",
+  Desserts: "chocolate brownie",
+  "Healthy Bowls": "fresh salad bowl",
+  Bakery: "fresh pastry",
+  "Street Food": "samosa chaat",
+  Combos: "indian thali meal",
+};
+
+const HARD_ITEM_IMAGE_HINTS = {
+  "combo meal": "indian thali meal",
+  "combo meal 1": "veg combo meal",
+  "combo meal 2": "fast food combo meal",
+  "bread butter": "garlic bread toast",
+  samosa: "samosa indian snack",
+  chaat: "chaat indian street food",
+  "salad bowl": "healthy salad bowl",
+};
+
+// Manual image URL overrides (highest priority).
+// Add exact menu item names here using lowercase keys.
+// Example:
+// "onion uttapam": "https://your-cdn.com/onion-uttapam.jpg"
+const ITEM_IMAGE_URL_OVERRIDES = {
+};
+
 function getSpecificImageQuery(name, category) {
   const normalizedName = toImageQuery(name);
+  const normalizedDish = normalizeDishText(name);
+  const hardHint = HARD_ITEM_IMAGE_HINTS[normalizedDish] || HARD_ITEM_IMAGE_HINTS[normalizedName];
+  if (hardHint) {
+    return hardHint;
+  }
+
   const override = ITEM_IMAGE_QUERY_OVERRIDES[normalizedName];
   if (override) {
     return override;
   }
 
+  const words = normalizeDishText(name)
+    .split(" ")
+    .filter((word) => word && !GENERIC_ITEM_TERMS.has(word));
+
+  if (words.length === 0) {
+    return CATEGORY_DISH_HINTS[category] || CATEGORY_IMAGE_HINTS[category] || "indian food";
+  }
+
+  const cleanedName = words.slice(0, 4).join(" ");
+
   const categoryHint = CATEGORY_IMAGE_HINTS[category] || category || "food";
-  return `${normalizedName || "food item"} ${categoryHint} food`;
+  return `${cleanedName} ${categoryHint} dish`;
+}
+
+function getImageOverrideUrl(name) {
+  const key = String(name || "")
+    .trim()
+    .toLowerCase();
+  return ITEM_IMAGE_URL_OVERRIDES[key] || "";
 }
 
 function buildInlineFoodSvg({ label, category }) {
   const safeLabel = String(label || "Food").slice(0, 28);
   const icon = CATEGORY_ICON_MAP[category] || "🍽";
   return `data:image/svg+xml;utf8,${encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="360" height="240" viewBox="0 0 360 240">
+    `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420" viewBox="0 0 640 420">
       <defs>
         <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#fff7e8"/>
-          <stop offset="100%" stop-color="#ffe7c0"/>
+          <stop offset="0%" stop-color="#ecfdf5"/>
+          <stop offset="100%" stop-color="#d1fae5"/>
         </linearGradient>
       </defs>
-      <rect width="360" height="240" fill="url(#g)"/>
-      <rect x="20" y="20" width="320" height="200" rx="16" fill="rgba(255,255,255,0.65)"/>
-      <text x="50%" y="48%" dominant-baseline="middle" text-anchor="middle" font-family="Segoe UI, Arial" font-size="46">${icon}</text>
-      <text x="50%" y="67%" dominant-baseline="middle" text-anchor="middle" font-family="Segoe UI, Arial" font-size="18" fill="#6a3f00">${safeLabel}</text>
+      <rect width="640" height="420" fill="url(#g)"/>
+      <rect x="28" y="28" width="584" height="364" rx="20" fill="rgba(255,255,255,0.70)"/>
+      <text x="50%" y="45%" dominant-baseline="middle" text-anchor="middle" font-family="Segoe UI, Arial" font-size="76">${icon}</text>
+      <text x="50%" y="63%" dominant-baseline="middle" text-anchor="middle" font-family="Segoe UI, Arial" font-size="28" fill="#14532d">${safeLabel}</text>
     </svg>`,
   )}`;
 }
 
-function buildFoodImageUrl({ name, category, id }) {
-  const label = name || getSpecificImageQuery(name, category) || id || "Food";
-  return buildInlineFoodSvg({ label, category });
+function hashSeed(value) {
+  const source = String(value || "food");
+  let hash = 0;
+  for (let index = 0; index < source.length; index += 1) {
+    hash = (hash << 5) - hash + source.charCodeAt(index);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function toFlickrTags(queryText) {
+  const normalized = String(queryText || "food")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const tokens = normalized.split(" ").filter(Boolean).slice(0, 3);
+  const finalTokens = tokens.length > 0 ? tokens : ["food"];
+  return ["food", ...finalTokens].join(",");
+}
+
+function buildFoodImageUrl({ name, category }) {
+  const specificQuery = getSpecificImageQuery(name, category);
+  const tags = toFlickrTags(specificQuery || `${category || "food"} dish`);
+  const seed = hashSeed(`${name || "food"}-${category || "general"}`);
+  return `https://loremflickr.com/640/420/${tags}?lock=${seed}`;
 }
 
 function buildFoodFallbackUrl(category) {
   return buildInlineFoodSvg({
-    label: `${category || "Food"} Item`,
+    label: CATEGORY_DISH_HINTS[category] || `${category || "Food"} Item`,
     category,
   });
 }
@@ -433,40 +594,44 @@ function writeJson(key, value) {
 }
 
 function normalizeStall(stall) {
+  const stableId = stall?.id ?? stall?._id ?? stall?.stallId ?? stall?.ownerEmail ?? `stall-${String(stall?.stallName || "campus").toLowerCase().replace(/\s+/g, "-")}`;
   return {
-    id: stall.id ?? Date.now(),
-    stallName: stall.stallName ?? "Campus Stall",
-    owner: stall.owner ?? "Unassigned",
-    contact: stall.contact ?? "N/A",
-    cuisine: stall.cuisine ?? "General",
-    status: stall.status ?? "Active",
-    rating: Number(stall.rating ?? 4.0),
-    ordersCount: Number(stall.ordersCount ?? 0),
-    hours: stall.hours ?? "9:00 AM - 6:00 PM",
-    specialties: Array.isArray(stall.specialties)
+    ...stall,
+    id: stableId,
+    _id: stall?._id || (typeof stableId === "string" ? stableId : undefined),
+    stallName: stall?.stallName ?? "Campus Stall",
+    owner: stall?.owner ?? "Unassigned",
+    ownerEmail: String(stall?.ownerEmail || "").toLowerCase(),
+    contact: stall?.contact ?? "N/A",
+    cuisine: stall?.cuisine ?? "General",
+    status: stall?.status ?? "Active",
+    rating: Number(stall?.rating ?? 4.0),
+    ordersCount: Number(stall?.ordersCount ?? 0),
+    hours: stall?.hours ?? "9:00 AM - 6:00 PM",
+    specialties: Array.isArray(stall?.specialties)
       ? stall.specialties
       : ["Quick Meals", "Snacks"],
     description:
-      stall.description ?? "Popular campus food stall serving fresh meals."
+      stall?.description ?? "Popular campus food stall serving fresh meals."
   };
 }
 
 function normalizeMenuItem(item) {
-  const generatedImage = buildFoodImageUrl({
-    name: item.name,
-    category: item.category,
-    id: item.id
-  });
+  const stableId = item?.id ?? item?._id ?? `${String(item?.stallId || item?.stall || "stall")}-${String(item?.name || "menu-item").toLowerCase().replace(/\s+/g, "-")}`;
+  const stableStallId = item?.stallId ?? item?.stall?._id ?? item?.stall ?? 101;
+  const overrideImage = getImageOverrideUrl(item?.name);
 
   return {
-    id: item.id ?? Date.now(),
-    stallId: item.stallId ?? 101,
-    name: item.name ?? "Menu Item",
-    category: item.category ?? "Fast Food",
-    price: Number(item.price ?? 50),
-    description: item.description ?? "Freshly prepared campus special.",
-    status: item.status ?? "Available",
-    image: needsImageRefresh(item.image) ? generatedImage : item.image
+    ...item,
+    id: stableId,
+    _id: item?._id || (typeof stableId === "string" ? stableId : undefined),
+    stallId: stableStallId,
+    name: item?.name ?? "Menu Item",
+    category: item?.category ?? "Fast Food",
+    price: Number(item?.price ?? 50),
+    description: item?.description ?? "Freshly prepared campus special.",
+    status: item?.status ?? "Available",
+    image: overrideImage || String(item?.image || "").trim()
   };
 }
 
@@ -506,6 +671,21 @@ export function ensureAppData() {
     ];
     writeJson("menuItems", merged);
   }
+
+  const existingCategories = readJson("categories", []);
+  if (!Array.isArray(existingCategories) || existingCategories.length === 0) {
+    writeJson("categories", DEFAULT_CATEGORIES);
+  } else {
+    const normalized = existingCategories
+      .map(normalizeCategory)
+      .filter(Boolean);
+    const existingNames = new Set(normalized.map((category) => String(typeof category === "string" ? category : category.name)));
+    const merged = [
+      ...normalized,
+      ...DEFAULT_CATEGORIES.filter((category) => !existingNames.has(String(category))).map(normalizeCategory),
+    ].filter(Boolean);
+    writeJson("categories", merged);
+  }
 }
 
 export function getCurrentUser() {
@@ -544,8 +724,16 @@ export function setMenuItems(items) {
 }
 
 export function getMenuCategories() {
-  const itemCategories = [...new Set(getMenuItems().map((item) => item.category))];
-  return [...new Set([...DEFAULT_CATEGORIES, ...itemCategories])];
+  const itemCategories = [...new Set(getMenuItems().map((item) => item.category).filter(Boolean))];
+  const storedCategories = readJson("categories", [])
+    .map((category) => (typeof category === "string" ? category : category?.name))
+    .filter(Boolean);
+
+  return [...new Set([...DEFAULT_CATEGORIES, ...storedCategories, ...itemCategories])];
+}
+
+export function setCategories(categories) {
+  writeJson("categories", categories);
 }
 
 export function getCategoryIcon(category) {
@@ -553,15 +741,8 @@ export function getCategoryIcon(category) {
 }
 
 export function getFoodImage(menuItem) {
-  if (!menuItem) return buildFoodImageUrl({ name: "food", category: "meal", id: "default" });
-  return (
-    menuItem.image ||
-    buildFoodImageUrl({
-      name: menuItem.name,
-      category: menuItem.category,
-      id: menuItem.id
-    })
-  );
+  if (!menuItem) return "";
+  return getFoodFallbackImage(menuItem.category || menuItem.name || "Food");
 }
 
 export function getFoodFallbackImage(category) {
@@ -596,19 +777,45 @@ export function getDisplayName(user) {
 
 export function assignStallToOwner(user) {
   const stalls = getStalls();
-  const key = user?.email;
+  const key = String(user?.email || "").toLowerCase();
   if (!key) return null;
 
   const ownerMap = readJson("stallOwnerStallMap", {});
   const mappedId = ownerMap[key];
   if (mappedId) {
-    return stalls.find((stall) => String(stall.id) === String(mappedId)) || null;
+    const mappedStall =
+      stalls.find((stall) => String(stall.id) === String(mappedId)) ||
+      stalls.find((stall) => String(stall._id) === String(mappedId));
+    if (mappedStall) {
+      return mappedStall;
+    }
+  }
+
+  const byOwnerEmail = stalls.find(
+    (stall) => String(stall.ownerEmail || "").toLowerCase() === key
+  );
+  if (byOwnerEmail) {
+    ownerMap[key] = byOwnerEmail.id || byOwnerEmail._id;
+    writeJson("stallOwnerStallMap", ownerMap);
+    return byOwnerEmail;
+  }
+
+  const userStallName = String(user?.stallName || "").trim().toLowerCase();
+  if (userStallName) {
+    const byStallName = stalls.find(
+      (stall) => String(stall.stallName || "").trim().toLowerCase() === userStallName
+    );
+    if (byStallName) {
+      ownerMap[key] = byStallName.id || byStallName._id;
+      writeJson("stallOwnerStallMap", ownerMap);
+      return byStallName;
+    }
   }
 
   const ownerName = getDisplayName(user).toLowerCase();
   const byName = stalls.find((stall) => stall.owner.toLowerCase() === ownerName);
   if (byName) {
-    ownerMap[key] = byName.id;
+    ownerMap[key] = byName.id || byName._id;
     writeJson("stallOwnerStallMap", ownerMap);
     return byName;
   }
@@ -621,7 +828,7 @@ export function assignStallToOwner(user) {
   const assigned = firstUnassigned || stalls.find((stall) => stall.status === "Active") || stalls[0] || null;
 
   if (assigned) {
-    ownerMap[key] = assigned.id;
+    ownerMap[key] = assigned.id || assigned._id;
     writeJson("stallOwnerStallMap", ownerMap);
   }
 
@@ -654,6 +861,7 @@ export function createOrder({
     studentName: resolvedStudentName,
     studentEmail: student?.email || "",
     studentId: student?.studentId || "N/A",
+    studentPhone: student?.phone || "",
     stallId: stall?.id,
     stallName: stall?.stallName || "Campus Stall",
     stallOwner: stall?.owner || "N/A",

@@ -106,6 +106,18 @@ const registerSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
+  passwordResetOtp: {
+    type: String,
+    default: null,
+  },
+  passwordResetOtpExpiresAt: {
+    type: Date,
+    default: null,
+  },
+  passwordResetSentAt: {
+    type: Date,
+    default: null,
+  },
 });
 
 

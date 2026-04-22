@@ -115,6 +115,25 @@ export default function ViewReports() {
     return Object.values(grouped).sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [filteredOrders]);
 
+  const chartRows = useMemo(() => reportRows.slice(0, 7).reverse(), [reportRows]);
+  const chartMaxRevenue = useMemo(
+    () => Math.max(1, ...chartRows.map((row) => Number(row.revenue || 0))),
+    [chartRows],
+  );
+  const chartRevenuePoints = useMemo(() => {
+    const width = 680;
+    const height = 210;
+    if (chartRows.length === 0) return "";
+
+    return chartRows
+      .map((row, index) => {
+        const x = chartRows.length === 1 ? 340 : 10 + (index / (chartRows.length - 1)) * width;
+        const y = 230 - (Number(row.revenue || 0) / chartMaxRevenue) * height;
+        return `${x},${Math.max(8, y)}`;
+      })
+      .join(" ");
+  }, [chartRows, chartMaxRevenue]);
+
   const studentCount = registrations.filter((user) => user.role === "student").length;
   const stallOwnerCount = registrations.filter((user) => user.role === "stall").length;
 
@@ -154,6 +173,10 @@ export default function ViewReports() {
 
           <li>
             <Link to="/manage-stalls">Manage Stalls</Link>
+          </li>
+
+          <li>
+            <Link to="/manage-categories">Manage Categories</Link>
           </li>
 
           <li className="active">
@@ -227,6 +250,10 @@ export default function ViewReports() {
             <p>Items Sold</p>
             <h2>{summary.totalItems}</h2>
           </div>
+          <div className="admin-card green">
+            <p>Bills Generated</p>
+            <h2>{summary.generatedBillCount}</h2>
+          </div>
         </div>
 
         <div className="sales-grid" style={{ marginTop: "24px" }}>
@@ -257,6 +284,48 @@ export default function ViewReports() {
               {stallSummaries.length === 0 && <li>No stall data for selected report range.</li>}
             </ul>
           </div>
+        </div>
+
+        <div className="orders-box" style={{ marginTop: "24px" }}>
+          <div className="panel-head">
+            <h3>Daily Revenue Graph</h3>
+            <span className="status-chip">Last {chartRows.length || 0} active days</span>
+          </div>
+
+          {chartRows.length > 0 ? (
+            <div style={{ width: "100%", overflowX: "auto" }}>
+              <svg viewBox="0 0 700 280" width="100%" height="280" role="img" aria-label="Daily revenue chart">
+                <rect x="0" y="0" width="700" height="280" fill="#f6fbf8" rx="10" />
+                <line x1="10" y1="230" x2="690" y2="230" stroke="#d2e6d9" strokeWidth="1.5" />
+                <line x1="20" y1="20" x2="20" y2="230" stroke="#d2e6d9" strokeWidth="1.5" />
+                <polyline
+                  fill="none"
+                  stroke="#0f8f57"
+                  strokeWidth="3"
+                  points={chartRevenuePoints}
+                />
+
+                {chartRows.map((row, index) => {
+                  const x = chartRows.length === 1 ? 340 : 10 + (index / (chartRows.length - 1)) * 680;
+                  const y = 230 - (Number(row.revenue || 0) / chartMaxRevenue) * 210;
+
+                  return (
+                    <g key={row.date}>
+                      <circle cx={x} cy={Math.max(20, y)} r="4" fill="#22b573" />
+                      <text x={x} y="248" textAnchor="middle" fontSize="10" fill="#38624d">
+                        {row.date}
+                      </text>
+                      <text x={x} y={Math.max(16, y - 8)} textAnchor="middle" fontSize="10" fill="#0f8f57">
+                        {Math.round(Number(row.revenue || 0))}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
+            </div>
+          ) : (
+            <p className="sub-text">No data available for graph.</p>
+          )}
         </div>
 
         <div className="orders-box" style={{ marginTop: "24px" }}>

@@ -41,6 +41,21 @@ npm run dev
 5. [ ] Check redirect to dashboard
 6. [ ] Verify order in database
 
+### Step 5: Enable Razorpay (Optional)
+
+- [ ] Add Razorpay keys in `backend/.env`
+  ```env
+  RAZORPAY_KEY_ID=rzp_test_xxxxxxxx
+  RAZORPAY_KEY_SECRET=your_razorpay_secret
+  RAZORPAY_CURRENCY=INR
+  ```
+- [ ] Ensure `frontend/.env` has:
+  ```env
+  VITE_API_URL=http://localhost:5000/api
+  VITE_ENABLE_ONLINE_PAYMENTS=true
+  ```
+- [ ] Restart backend and frontend after env changes
+
 ---
 
 ## 📋 What Works Now

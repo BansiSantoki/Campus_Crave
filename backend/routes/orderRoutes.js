@@ -1,6 +1,7 @@
 import express from "express";
 import {
   createOrder,
+  createRazorpayPaymentOrder,
   getAllOrders,
   getOrdersByStudent,
   getOrdersByStall,
@@ -10,12 +11,20 @@ import {
   sendOrderBillEmail,
   sendOrderBillWhatsApp,
   downloadOrderBillPdf,
+  verifyRazorpayPayment,
+  submitOrderReview,
 } from "../controllers/Order.controller.js";
 
 const router = express.Router();
 
 // Create new order
 router.post("/orders", createOrder);
+
+// Razorpay payment order (for online orders)
+router.post("/payments/razorpay/create-order", createRazorpayPaymentOrder);
+
+// Razorpay payment verification
+router.post("/payments/razorpay/verify", verifyRazorpayPayment);
 
 // Get all orders
 router.get("/orders", getAllOrders);
@@ -43,5 +52,8 @@ router.post("/orders/:orderId/send-bill", sendOrderBillEmail);
 
 // Send bill to admin WhatsApp number
 router.post("/orders/:orderId/send-whatsapp", sendOrderBillWhatsApp);
+
+// Submit student rating and review for an order
+router.post("/orders/:orderId/review", submitOrderReview);
 
 export default router;

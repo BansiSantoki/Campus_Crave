@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { clearCurrentUser } from "../../utils/appData";
+import { clearCurrentUser, getCurrentUser, getDisplayName } from "../../utils/appData";
 import {
   createStall,
   deleteStallById,
   fetchAllStalls,
   updateStallById,
 } from "../../utils/stallApi";
+import { fetchAllOrders } from "../../utils/orderApi";
+import { formatCurrency } from "../../utils/orderInsights";
 
 const CUISINE_OPTIONS = [
   "South Indian",
@@ -21,10 +23,22 @@ const CUISINE_OPTIONS = [
   "Combos"
 ];
 
+function getDisplayStallId(stall) {
+  const raw = stall?._id || stall?.id || "";
+  const value = String(raw || "");
+  if (!value) {
+    return "N/A";
+  }
+  return value.length > 6 ? value.slice(-6).toUpperCase() : value.toUpperCase();
+}
+
 export default function ManageStalls() {
 
   const navigate = useNavigate();
+  const currentUser = getCurrentUser();
+  const adminName = getDisplayName(currentUser);
   const [stalls, setStalls] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [submitError, setSubmitError] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -48,9 +62,13 @@ export default function ManageStalls() {
 
     const loadStalls = async () => {
       try {
-        const dbStalls = await fetchAllStalls();
+        const [dbStalls, ordersResult] = await Promise.all([
+          fetchAllStalls(),
+          fetchAllOrders(),
+        ]);
         if (!isMounted) return;
         setStalls(dbStalls || []);
+        setOrders(ordersResult?.orders || []);
       } catch (error) {
         if (isMounted) {
           setSubmitError(error.message || "Failed to load stalls");
@@ -197,6 +215,10 @@ export default function ManageStalls() {
           </li>
 
           <li>
+            <Link to="/manage-categories">Manage Categories</Link>
+          </li>
+
+          <li>
             <Link to="/view-reports">View Reports</Link>
           </li>
 
@@ -223,7 +245,7 @@ export default function ManageStalls() {
           <div className="user-box">
 
             <div className="user-details">
-              <p>Admin User</p>
+              <p>{adminName}</p>
               <span>System Administrator</span>
             </div>
 
@@ -251,12 +273,12 @@ export default function ManageStalls() {
 
           <div className="admin-card purple">
             <p>Total Orders</p>
-            <h2>13,580</h2>
+            <h2>{orders.length}</h2>
           </div>
 
           <div className="admin-card green">
             <p>Total Revenue</p>
-            <h2>₹617K</h2>
+            <h2>{formatCurrency(orders.reduce((sum, order) => sum + Number(order.totalAmount || 0), 0))}</h2>
           </div>
 
         </div>
@@ -315,8 +337,8 @@ export default function ManageStalls() {
             </thead>
             <tbody>
               {filteredStalls.map(stall => (
-                <tr key={stall._id}>
-                  <td>#{stall._id.slice(-6).toUpperCase()}</td>
+                <tr key={stall._id || stall.id || stall.stallName}>
+                  <td>#{getDisplayStallId(stall)}</td>
                   <td>{stall.stallName}</td>
                   <td>{stall.owner}</td>
                   <td>{stall.contact}</td>
@@ -325,10 +347,15 @@ export default function ManageStalls() {
                   <td>
                     <button className="view-btn" onClick={() => handleViewClick(stall)}>View</button>
                     <button className="edit-btn" onClick={() => handleEditClick(stall)}>Edit</button>
-                    <button className="delete-btn" onClick={() => handleDelete(stall._id)}>Delete</button>
+                    <button className="delete-btn" onClick={() => handleDelete(stall._id || stall.id)}>Delete</button>
                   </td>
                 </tr>
               ))}
+              {filteredStalls.length === 0 && (
+                <tr>
+                  <td colSpan="7">No stalls found for selected filters.</td>
+                </tr>
+              )}
             </tbody>
           </table>
           {submitError && <p className="field-error" style={{ marginTop: "10px" }}>{submitError}</p>}
@@ -423,7 +450,7 @@ export default function ManageStalls() {
               <div className="modal-body view-details">
                 <div className="detail-row">
                   <label>Stall ID:</label>
-                  <span>#{selectedStall._id.slice(-6).toUpperCase()}</span>
+                  <span>#{getDisplayStallId(selectedStall)}</span>
                 </div>
                 <div className="detail-row">
                   <label>Stall Name:</label>

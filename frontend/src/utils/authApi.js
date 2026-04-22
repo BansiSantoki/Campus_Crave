@@ -45,7 +45,31 @@ export async function loginUser(payload) {
 }
 
 export async function forgotPasswordUser(payload) {
-  const response = await fetch(`${API_BASE}/forgot-password`, {
+  const response = await fetch(`${API_BASE}/change-password`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  return parseJson(response);
+}
+
+export async function requestForgotPasswordOtp(payload) {
+  const response = await fetch(`${API_BASE}/forgot-password/request-otp`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  return parseJson(response);
+}
+
+export async function resetForgotPasswordWithOtp(payload) {
+  const response = await fetch(`${API_BASE}/forgot-password/reset`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -80,12 +104,15 @@ export async function createRegistration(payload) {
 }
 
 export async function updateRegistrationById(id, payload) {
+  const isFormDataPayload = payload instanceof FormData;
   const response = await fetch(`${API_BASE}/register/${encodeURIComponent(id)}`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
+    headers: isFormDataPayload
+      ? undefined
+      : {
+          "Content-Type": "application/json",
+        },
+    body: isFormDataPayload ? payload : JSON.stringify(payload),
   });
 
   return parseJson(response);

@@ -9,6 +9,7 @@ import { fetchAllOrders } from "../../utils/orderApi";
 import { fetchRegistrations } from "../../utils/authApi";
 import { fetchAllStalls } from "../../utils/stallApi";
 import { fetchActivityLog } from "../../utils/activityApi";
+import { fetchReviews } from "../../utils/reviewApi";
 import {
   formatCurrency,
   getOrderStatusLabel,
@@ -26,19 +27,22 @@ export default function AdminDashboard() {
   const [stalls, setStalls] = useState([]);
   const [registrations, setRegistrations] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [reviews, setReviews] = useState([]);
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [lastSyncedAt, setLastSyncedAt] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
 
     const loadDashboardData = async () => {
       setLoading(true);
-      const [ordersResult, registrationsResult, stallsResult, activitiesResult] = await Promise.allSettled([
+      const [ordersResult, registrationsResult, stallsResult, activitiesResult, reviewsResult] = await Promise.allSettled([
         fetchAllOrders(),
         fetchRegistrations(),
         fetchAllStalls(),
         fetchActivityLog(20),
+        fetchReviews(),
       ]);
 
       if (isMounted) {
@@ -58,6 +62,11 @@ export default function AdminDashboard() {
           setActivities(activitiesResult.value || []);
         }
 
+        if (reviewsResult.status === "fulfilled") {
+          setReviews(reviewsResult.value || []);
+        }
+
+        setLastSyncedAt(new Date());
         setLoading(false);
       }
     };
@@ -80,6 +89,16 @@ export default function AdminDashboard() {
   const summary = useMemo(() => getOrderSummary(orders), [orders]);
   const topItems = useMemo(() => getTopItems(orders, 5), [orders]);
   const stallSummaries = useMemo(() => getStallSummaries(orders, stalls), [orders, stalls]);
+  const reviewSummary = useMemo(() => {
+    const total = reviews.length;
+    const average = total
+      ? reviews.reduce((sum, entry) => sum + Number(entry.rating || 0), 0) / total
+      : 0;
+    return {
+      total,
+      average: Number(average.toFixed(1)),
+    };
+  }, [reviews]);
 
   const handleLogout = () => {
     clearCurrentUser();
@@ -116,6 +135,10 @@ export default function AdminDashboard() {
           </li>
 
           <li>
+            <Link to="/manage-categories">Manage Categories</Link>
+          </li>
+
+          <li>
             <Link to="/view-reports">View Reports</Link>
           </li>
         </ul>
@@ -126,7 +149,12 @@ export default function AdminDashboard() {
 
         {/* Header */}
         <div className="header">
-          <h2>Admin Dashboard</h2>
+          <div>
+            <h2>Admin Dashboard</h2>
+            <span className="sub-text">
+              {lastSyncedAt ? `Live summary sync: ${lastSyncedAt.toLocaleTimeString()}` : "Live summary sync pending..."}
+            </span>
+          </div>
 
           <div className="user-box">
             <div className="user-details">
@@ -172,9 +200,24 @@ export default function AdminDashboard() {
             <h2>{summary.totalItems}</h2>
           </div>
 
+          <div className="admin-card green">
+            <p>Bills Generated</p>
+            <h2>{summary.generatedBillCount}</h2>
+          </div>
+
           <div className="admin-card">
             <p>Order Mix</p>
             <h2>{`${summary.newOrders}/${summary.preparingOrders}/${summary.readyOrders}`}</h2>
+          </div>
+
+          <div className="admin-card purple">
+            <p>Total Reviews</p>
+            <h2>{reviewSummary.total}</h2>
+          </div>
+
+          <div className="admin-card green">
+            <p>Average Rating</p>
+            <h2>{`${reviewSummary.average} / 5`}</h2>
           </div>
 
         </div>
@@ -309,6 +352,43 @@ export default function AdminDashboard() {
                 {stallSummaries.length === 0 && (
                   <tr>
                     <td colSpan="8">No stall summary data available yet.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="orders-box" style={{ marginTop: "24px" }}>
+          <div className="panel-head">
+            <h3>Student Ratings & Reviews</h3>
+            <span className="status-chip">{reviews.length} total</span>
+          </div>
+
+          <div className="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>STALL</th>
+                  <th>STUDENT</th>
+                  <th>RATING</th>
+                  <th>REVIEW</th>
+                  <th>UPDATED AT</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reviews.slice(0, 20).map((entry) => (
+                  <tr key={entry._id}>
+                    <td>{entry.stallName}</td>
+                    <td>{entry.studentName}</td>
+                    <td>{`⭐ ${Number(entry.rating || 0).toFixed(1)}`}</td>
+                    <td>{entry.review || "-"}</td>
+                    <td>{new Date(entry.updatedAt || entry.createdAt).toLocaleString()}</td>
+                  </tr>
+                ))}
+                {reviews.length === 0 && (
+                  <tr>
+                    <td colSpan="5">No student reviews submitted yet.</td>
                   </tr>
                 )}
               </tbody>

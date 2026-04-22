@@ -267,6 +267,10 @@ export default function ManageStallOwners() {
           </li>
 
           <li>
+            <Link to="/manage-categories">Manage Categories</Link>
+          </li>
+
+          <li>
             <Link to="/view-reports">View Reports</Link>
           </li>
 

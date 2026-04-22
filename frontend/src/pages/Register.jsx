@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { registerUser } from "../utils/authApi";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -14,10 +15,10 @@ export default function Register() {
     year: "",
     password: "",
     confirmPassword: "",
-    role: "student"
   });
 
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -88,7 +89,7 @@ export default function Register() {
     return newErrors;
   };
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e?.preventDefault();
     const newErrors = validateForm();
     setErrors(newErrors);
@@ -97,12 +98,32 @@ export default function Register() {
       return;
     }
 
-    const users = JSON.parse(localStorage.getItem("users")) || [];
-    users.push(form);
-    localStorage.setItem("users", JSON.stringify(users));
+    try {
+      setSubmitting(true);
+      const response = await registerUser({
+        studentId: form.studentId.trim(),
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        email: form.email.trim().toLowerCase(),
+        phone: form.phone.trim(),
+        department: form.department,
+        year: form.year,
+        password: form.password,
+        confirmPassword: form.confirmPassword,
+        role: "student",
+      });
 
-    alert("Registered Successfully!");
-    navigate("/");
+      const verifyMessage = response?.verificationEmailSent
+        ? "Verification email sent successfully."
+        : response?.verificationEmailMessage || "Verification email not sent.";
+
+      alert(`Registered Successfully! ${verifyMessage}`);
+      navigate("/");
+    } catch (error) {
+      setErrors({ submit: error.message || "Registration failed" });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -110,32 +131,8 @@ export default function Register() {
       <div className="auth-card">
         <div className="icon-circle">👤+</div>
         <h2>Create Account</h2>
-        <p className="sub-text">Join CampusCrave - Smart Canteen System</p>
-
-        {/* ROLE SELECT */}
-        <div className="role-select">
-          <label>
-            <input
-              type="radio"
-              name="role"
-              value="student"
-              checked={form.role === "student"}
-              onChange={handleChange}
-            />
-            Student
-          </label>
-
-          <label>
-            <input
-              type="radio"
-              name="role"
-              value="stall"
-              checked={form.role === "stall"}
-              onChange={handleChange}
-            />
-            Stall Owner
-          </label>
-        </div>
+        <p className="sub-text">Student registration for CampusCrave</p>
+        {errors.submit && <p className="error-message">{errors.submit}</p>}
 
         <input 
           name="studentId" 
@@ -247,9 +244,13 @@ export default function Register() {
           </div>
         </div>
 
-        <button className="gradient-btn" onClick={handleRegister}>
-          Register
+        <button className="gradient-btn" onClick={handleRegister} disabled={submitting}>
+          {submitting ? "Registering..." : "Register"}
         </button>
+
+        <p className="bottom-text">
+          Want to register a stall? <Link to="/register/stall-owner">Stall owner sign up</Link>
+        </p>
 
         <p className="bottom-text">
           Already have an account? <Link to="/">Login here</Link>

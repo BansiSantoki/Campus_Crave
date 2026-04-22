@@ -1,9 +1,11 @@
 import { Router } from "express";
 import { check } from "express-validator";
 import {
+  changePassword,
   deleteRegistration,
-  forgotPassword,
   getRegistrations,
+  requestForgotPasswordOtp,
+  resetForgotPassword,
   register,
   updateRegistration,
   login,
@@ -78,7 +80,7 @@ router.post(
 ); 
 
 router.post(
-  "/forgot-password",
+  "/change-password",
   [
     check("email").isEmail().withMessage("Valid email is required"),
     check("currentPassword").notEmpty().withMessage("Current password is required"),
@@ -91,8 +93,38 @@ router.post(
       .withMessage(
         "Password must contain at least 8 characters, one uppercase, one lowercase, and one number",
       ),
+    check("confirmPassword")
+      .notEmpty()
+      .withMessage("Confirm password is required"),
   ],
-  forgotPassword,
+  changePassword,
+);
+
+router.post(
+  "/forgot-password/request-otp",
+  [check("email").isEmail().withMessage("Valid email is required")],
+  requestForgotPasswordOtp,
+);
+
+router.post(
+  "/forgot-password/reset",
+  [
+    check("email").isEmail().withMessage("Valid email is required"),
+    check("otp").isLength({ min: 6, max: 6 }).withMessage("Valid 6-digit OTP is required"),
+    check("newPassword")
+      .isLength({ min: 8, max: 25 })
+      .withMessage(
+        "Password must be at least 8 characters and at most 25 characters",
+      )
+      .matches(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,25}/)
+      .withMessage(
+        "Password must contain at least 8 characters, one uppercase, one lowercase, and one number",
+      ),
+    check("confirmPassword")
+      .notEmpty()
+      .withMessage("Confirm password is required"),
+  ],
+  resetForgotPassword,
 );
 
 

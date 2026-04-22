@@ -1,11 +1,13 @@
 import fs from "node:fs";
+import crypto from "node:crypto";
 import path from "node:path";
 import process from "node:process";
 import PDFDocument from "pdfkit";
+import Razorpay from "razorpay";
 import { fileURLToPath } from "url";
 import Order from "../models/Order.js";
-import { sendWhatsAppBill } from "../services/whatsappService.js";
-import { getBillDownloadUrl, getMailerConfig, sendEmail } from "../config/mailer.js";
+import { isPublicBillUrl, sendWhatsAppBill } from "../services/whatsappService.js";
+import { getBillDownloadUrl, sendEmail } from "../config/mailer.js";
 import { recordActivity } from "../services/activityLogger.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -32,6 +34,24 @@ const REQUIRED_FIELDS = [
 const formatMoney = (value) => `Rs. ${Number(value || 0).toFixed(2)}`;
 
 const createOrderId = () => `ORD${Date.now()}${Math.floor(Math.random() * 900 + 100)}`;
+const isOnlinePayment = (paymentMethod) => String(paymentMethod || "").toLowerCase() === "online";
+
+const getRazorpayClient = () => {
+  const keyId = String(process.env.RAZORPAY_KEY_ID || "").trim();
+  const keySecret = String(process.env.RAZORPAY_KEY_SECRET || "").trim();
+
+  console.log("🔍 DEBUG Razorpay Config:", {
+    keyId: keyId ? `${keyId.substring(0, 10)}...` : "MISSING",
+    keySecret: keySecret ? `${keySecret.substring(0, 10)}...` : "MISSING",
+  });
+
+  if (!keyId || !keySecret) {
+    console.error("❌ Razorpay keys missing! keyId:", !!keyId, "keySecret:", !!keySecret);
+    return null;
+  }
+
+  return new Razorpay({ key_id: keyId, key_secret: keySecret });
+};
 
 const getMissingFields = (payload) =>
   REQUIRED_FIELDS.filter((field) => {
@@ -107,38 +127,99 @@ const createBillPdfFile = async (order) => {
 
     doc.pipe(stream);
 
-    doc.fontSize(20).text("Campus Crave - Order Bill", { align: "center" });
-    doc.moveDown();
-    doc.fontSize(12);
-    doc.text(`Order ID: ${order.orderId}`);
-    doc.text(`Student: ${order.studentName} (${order.studentEmail})`);
-    doc.text(`Stall: ${order.stallName}`);
-    doc.text(`Pickup Time: ${order.pickupTime}`);
-    doc.moveDown();
+    const pageWidth = doc.page.width;
+    const pageHeight = doc.page.height;
+    const left = 42;
+    const right = pageWidth - 42;
 
-    doc.fontSize(14).text("Items:", { underline: true });
-    doc.moveDown(0.5);
-    (order.items || []).forEach((item) => {
-      doc
-        .fontSize(12)
-        .text(
-          `${item.itemName} | Qty: ${item.quantity} | Price: ${formatMoney(item.price)} | Total: ${formatMoney(item.totalPrice)}`
-        );
+    // Background accents
+    doc.rect(0, 0, pageWidth, pageHeight).fill("#f7fcf9");
+    doc.circle(pageWidth - 32, 38, 72).fill("#d9f5e7");
+    doc.circle(26, pageHeight - 36, 62).fill("#e9fbf3");
+
+    // Header band
+    doc.roundedRect(left, 24, right - left, 96, 12).fill("#0f8f57");
+    doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(27).text("Campus Crave", left + 20, 48);
+    doc.font("Helvetica").fontSize(12).text("ORDER INVOICE", left + 22, 80);
+    doc.roundedRect(right - 180, 58, 150, 30, 8).fill("#22b573");
+    doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(11).text(`Invoice: ${order.orderId}`, right - 168, 68);
+
+    // Meta cards
+    doc.roundedRect(left, 138, 250, 74, 10).fill("#ffffff").strokeColor("#cae8d8").lineWidth(1).stroke();
+    doc.fillColor("#4c6d5b").font("Helvetica").fontSize(10).text("Billed To", left + 12, 150);
+    doc.fillColor("#153f2a").font("Helvetica-Bold").fontSize(12).text(order.studentName || "Student", left + 12, 165);
+    doc.fillColor("#2f5b44").font("Helvetica").fontSize(10.5).text(order.studentEmail || "-", left + 12, 182);
+
+    doc.roundedRect(312, 138, right - 312, 74, 10).fill("#ffffff").strokeColor("#cae8d8").lineWidth(1).stroke();
+    doc.fillColor("#4c6d5b").font("Helvetica").fontSize(10).text("Order Info", 324, 150);
+    doc.fillColor("#153f2a").font("Helvetica-Bold").fontSize(11).text(`Stall: ${order.stallName || "Campus Stall"}`, 324, 165);
+    doc.fillColor("#2f5b44").font("Helvetica").fontSize(10.5).text(`Pickup: ${order.pickupTime || "-"}`, 324, 182);
+
+    // Items table
+    const tableTop = 236;
+    const rowHeight = 27;
+    const c1 = left;
+    const c2 = 335;
+    const c3 = 400;
+    const c4 = 482;
+
+    doc.roundedRect(left, tableTop, right - left, rowHeight, 7).fill("#daf4e6");
+    doc.fillColor("#0d7f4b").font("Helvetica-Bold").fontSize(10.5);
+    doc.text("Item", c1 + 10, tableTop + 8);
+    doc.text("Qty", c2 + 8, tableTop + 8);
+    doc.text("Rate", c3 + 8, tableTop + 8);
+    doc.text("Amount", c4 + 8, tableTop + 8);
+
+    let y = tableTop + rowHeight;
+    (order.items || []).forEach((item, index) => {
+      if (index % 2 === 0) {
+        doc.rect(left, y, right - left, rowHeight).fill("#ffffff");
+      } else {
+        doc.rect(left, y, right - left, rowHeight).fill("#f3fbf6");
+      }
+
+      doc.fillColor("#1a1a1a").font("Helvetica").fontSize(10.5);
+      doc.text(String(item.itemName || "Item"), c1 + 10, y + 8, { width: c2 - c1 - 16, ellipsis: true });
+      doc.text(String(item.quantity || 0), c2 + 8, y + 8);
+      doc.text(formatMoney(item.price), c3 + 8, y + 8);
+      doc.text(formatMoney(item.totalPrice), c4 + 8, y + 8);
+      y += rowHeight;
     });
 
-    doc.moveDown();
-    doc.fontSize(12).text(`Subtotal: ${formatMoney(order.subtotal)}`);
-    doc.text(`Tax (5%): ${formatMoney(order.tax)}`);
-    doc.fontSize(13).text(`Grand Total: ${formatMoney(order.totalAmount)}`);
-    doc.text(`Payment Method: ${order.paymentMethod}`);
+    doc.rect(left, tableTop, right - left, Math.max(rowHeight * ((order.items || []).length + 1), rowHeight * 2))
+      .lineWidth(1)
+      .strokeColor("#cae8d8")
+      .stroke();
 
+    // Summary block
+    const summaryTop = y + 18;
+    doc.roundedRect(328, summaryTop, right - 328, 118, 12).fill("#e9f9f0");
+    doc.fillColor("#1f5d3f").font("Helvetica").fontSize(11);
+    doc.text("Subtotal", 342, summaryTop + 18);
+    doc.text(formatMoney(order.subtotal), 460, summaryTop + 18, { width: 110, align: "right" });
+    doc.text("Tax (5%)", 342, summaryTop + 44);
+    doc.text(formatMoney(order.tax), 460, summaryTop + 44, { width: 110, align: "right" });
+    doc.font("Helvetica-Bold").fontSize(13).fillColor("#0b8a50");
+    doc.text("Grand Total", 342, summaryTop + 74);
+    doc.text(formatMoney(order.totalAmount), 442, summaryTop + 74, { width: 128, align: "right" });
+
+    // Notes
+    doc.fillColor("#304f40").font("Helvetica").fontSize(10.5);
+    doc.text(`Payment: ${String(order.paymentMethod || "online").toUpperCase()}`, left, summaryTop + 16);
     if (order.specialInstructions) {
-      doc.moveDown();
-      doc.fontSize(12).text(`Special Instructions: ${order.specialInstructions}`);
+      doc.text(`Instructions: ${order.specialInstructions}`, left, summaryTop + 40, { width: 270 });
     }
 
-    doc.moveDown(1.5);
-    doc.fontSize(11).text("Thank you for ordering from Campus Crave.", { align: "center" });
+    // Footer
+    doc.moveTo(left, pageHeight - 78).lineTo(right, pageHeight - 78).strokeColor("#b8ddc8").lineWidth(1).stroke();
+    doc.fillColor("#2d6548").font("Helvetica-Bold").fontSize(10.5).text("Thank you for ordering with Campus Crave", left, pageHeight - 64, {
+      align: "center",
+      width: right - left,
+    });
+    doc.fillColor("#4e7c64").font("Helvetica").fontSize(9.5).text("Invoice Template v3 • support@campuscrave.local", left, pageHeight - 48, {
+      align: "center",
+      width: right - left,
+    });
     doc.end();
   });
 
@@ -146,6 +227,49 @@ const createBillPdfFile = async (order) => {
     fileName,
     filePath,
     publicUrl: getBillDownloadUrl(order.orderId),
+  };
+};
+
+const finalizeOrderArtifacts = async (order) => {
+  let billPdf = null;
+  try {
+    billPdf = await createBillPdfFile(order);
+    order.billPdfFileName = billPdf.fileName;
+    order.billPdfUrl = billPdf.publicUrl;
+    order.updatedAt = new Date();
+  } catch (pdfError) {
+    console.error("PDF generation failed:", pdfError.message);
+  }
+
+  const whatsappTarget = String(order.studentPhone || "").trim();
+  const billLink = billPdf?.publicUrl || order.billPdfUrl || "";
+  const billUrlPublic = isPublicBillUrl(billLink);
+
+  let whatsappResult = {
+    success: false,
+    message: "Phone number unavailable. WhatsApp bill not sent.",
+  };
+
+  if (whatsappTarget) {
+    whatsappResult = await sendWhatsAppBill(whatsappTarget, order, {
+      mediaUrl: billPdf?.publicUrl,
+      billLink,
+    });
+
+    order.whatsappSent = Boolean(whatsappResult.success);
+    order.whatsappSentAt = whatsappResult.success ? new Date() : null;
+    order.whatsappError = whatsappResult.success
+      ? ""
+      : whatsappResult.message || whatsappResult.error || "Failed to send WhatsApp bill";
+  }
+
+  await order.save();
+
+  return {
+    billPdf,
+    billUrlPublic,
+    whatsappTarget,
+    whatsappResult,
   };
 };
 
@@ -161,44 +285,23 @@ export const createOrder = async (req, res) => {
       });
     }
 
+    const requestedPaymentStatus = payload.paymentStatus || "Pending";
+    const sanitizedPaymentStatus = isOnlinePayment(payload.paymentMethod)
+      ? "Pending"
+      : requestedPaymentStatus;
+
     const order = new Order({
       ...payload,
       orderId: payload.orderId || createOrderId(),
       orderStatus: payload.orderStatus || "New",
-      paymentStatus: payload.paymentStatus || "Pending",
+      paymentStatus: sanitizedPaymentStatus,
+      paymentReference: isOnlinePayment(payload.paymentMethod)
+        ? ""
+        : String(payload.paymentReference || "").trim(),
       updatedAt: new Date(),
     });
 
     const savedOrder = await order.save();
-
-    let billPdf = null;
-    try {
-      billPdf = await createBillPdfFile(savedOrder);
-      savedOrder.billPdfFileName = billPdf.fileName;
-      savedOrder.billPdfUrl = billPdf.publicUrl;
-      savedOrder.updatedAt = new Date();
-      await savedOrder.save();
-    } catch (pdfError) {
-      console.error("PDF generation failed:", pdfError.message);
-    }
-
-    const whatsappTarget = process.env.ADMIN_WHATSAPP_NUMBER || savedOrder.studentPhone;
-    let whatsappResult = {
-      success: false,
-      message: "Phone number unavailable. WhatsApp bill not sent.",
-    };
-
-    if (whatsappTarget) {
-      whatsappResult = await sendWhatsAppBill(whatsappTarget, savedOrder, {
-        mediaUrl: billPdf?.publicUrl,
-      });
-      savedOrder.whatsappSent = Boolean(whatsappResult.success);
-      savedOrder.whatsappSentAt = whatsappResult.success ? new Date() : null;
-      savedOrder.whatsappError = whatsappResult.success
-        ? ""
-        : whatsappResult.message || whatsappResult.error || "Failed to send WhatsApp bill";
-      await savedOrder.save();
-    }
 
     await recordActivity({
       actorName: savedOrder.studentName,
@@ -217,20 +320,227 @@ export const createOrder = async (req, res) => {
       },
     });
 
+    if (isOnlinePayment(savedOrder.paymentMethod)) {
+      return res.status(201).json({
+        success: true,
+        message: "Order created. Complete payment to confirm order.",
+        orderId: savedOrder.orderId,
+        order: savedOrder,
+        requiresPayment: true,
+        billPdfUrl: null,
+        whatsappSent: false,
+        whatsappTarget: String(savedOrder.studentPhone || "").trim() || null,
+        whatsappMessage: "Payment pending. Bill will be shared after payment verification.",
+        whatsappError: "",
+        billUrlPublic: false,
+      });
+    }
+
+    const finalization = await finalizeOrderArtifacts(savedOrder);
+
     return res.status(201).json({
       success: true,
       message: "Order placed successfully",
       orderId: savedOrder.orderId,
       order: savedOrder,
-      whatsappSent: Boolean(whatsappResult.success),
-      whatsappTarget: whatsappTarget || null,
-      whatsappMessage: whatsappResult.message || "",
-      billPdfUrl: billPdf?.publicUrl || savedOrder.billPdfUrl || null,
+      whatsappSent: Boolean(finalization.whatsappResult.success),
+      whatsappTarget: finalization.whatsappTarget || null,
+      whatsappMessage: finalization.whatsappResult.message || "",
+      whatsappError: finalization.whatsappResult.success
+        ? ""
+        : finalization.whatsappResult.error || finalization.whatsappResult.message || "",
+      billPdfUrl: finalization.billPdf?.publicUrl || savedOrder.billPdfUrl || null,
+      billUrlPublic: finalization.billUrlPublic,
     });
   } catch (error) {
     return res.status(500).json({
       success: false,
       message: "Failed to create order",
+      error: error.message,
+    });
+  }
+};
+
+export const createRazorpayPaymentOrder = async (req, res) => {
+  try {
+    const { orderId } = req.body || {};
+    if (!orderId) {
+      return res.status(400).json({ success: false, message: "orderId is required" });
+    }
+
+    const order = await Order.findOne({ orderId: String(orderId).trim() });
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    if (!isOnlinePayment(order.paymentMethod)) {
+      return res.status(400).json({ success: false, message: "Razorpay is only available for online payments" });
+    }
+
+    if (order.paymentStatus === "Completed") {
+      return res.status(400).json({ success: false, message: "Payment is already completed for this order" });
+    }
+
+    const razorpay = getRazorpayClient();
+    if (!razorpay) {
+      return res.status(400).json({
+        success: false,
+        message: "Razorpay is not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET",
+      });
+    }
+
+    const amountInPaise = Math.round(Number(order.totalAmount || 0) * 100);
+    if (!Number.isFinite(amountInPaise) || amountInPaise <= 0) {
+      return res.status(400).json({ success: false, message: "Invalid order amount" });
+    }
+
+    const currency = String(process.env.RAZORPAY_CURRENCY || "INR").toUpperCase();
+    const razorpayOrder = await razorpay.orders.create({
+      amount: amountInPaise,
+      currency,
+      receipt: String(order.orderId).slice(0, 40),
+      notes: {
+        campusOrderId: order.orderId,
+        studentEmail: order.studentEmail || "",
+      },
+    });
+
+    order.paymentGateway = "razorpay";
+    order.razorpayOrderId = razorpayOrder.id;
+    order.paymentStatus = "Pending";
+    order.updatedAt = new Date();
+    await order.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Razorpay order created",
+      keyId: String(process.env.RAZORPAY_KEY_ID || "").trim(),
+      razorpayOrderId: razorpayOrder.id,
+      amount: amountInPaise,
+      currency,
+      campusOrderId: order.orderId,
+      customer: {
+        name: order.studentName,
+        email: order.studentEmail,
+        contact: order.studentPhone || "",
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create Razorpay payment order",
+      error: error.message,
+    });
+  }
+};
+
+export const verifyRazorpayPayment = async (req, res) => {
+  try {
+    const {
+      orderId,
+      razorpayOrderId,
+      razorpayPaymentId,
+      razorpaySignature,
+    } = req.body || {};
+
+    if (!orderId || !razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+      return res.status(400).json({
+        success: false,
+        message: "orderId, razorpayOrderId, razorpayPaymentId and razorpaySignature are required",
+      });
+    }
+
+    const order = await Order.findOne({ orderId: String(orderId).trim() });
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    if (!isOnlinePayment(order.paymentMethod)) {
+      return res.status(400).json({ success: false, message: "Razorpay verification is only valid for online orders" });
+    }
+
+    if (order.paymentStatus === "Completed") {
+      return res.status(200).json({
+        success: true,
+        message: "Payment is already verified for this order",
+        order,
+      });
+    }
+
+    if (!order.razorpayOrderId || String(order.razorpayOrderId) !== String(razorpayOrderId)) {
+      order.paymentStatus = "Failed";
+      order.updatedAt = new Date();
+      await order.save();
+
+      return res.status(400).json({
+        success: false,
+        message: "Razorpay order does not match the Campus Crave order",
+      });
+    }
+
+    const keySecret = String(process.env.RAZORPAY_KEY_SECRET || "").trim();
+    if (!keySecret) {
+      return res.status(400).json({
+        success: false,
+        message: "Razorpay is not configured. Missing RAZORPAY_KEY_SECRET",
+      });
+    }
+
+    const expectedSignature = crypto
+      .createHmac("sha256", keySecret)
+      .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+      .digest("hex");
+
+    if (expectedSignature !== razorpaySignature) {
+      order.paymentStatus = "Failed";
+      order.updatedAt = new Date();
+      await order.save();
+
+      return res.status(400).json({ success: false, message: "Invalid Razorpay payment signature" });
+    }
+
+    order.paymentGateway = "razorpay";
+    order.razorpayOrderId = razorpayOrderId;
+    order.razorpayPaymentId = razorpayPaymentId;
+    order.razorpaySignature = razorpaySignature;
+    order.paymentReference = razorpayPaymentId;
+    order.paymentStatus = "Completed";
+    order.updatedAt = new Date();
+    await order.save();
+
+    const finalization = await finalizeOrderArtifacts(order);
+
+    await recordActivity({
+      actorName: order.studentName,
+      actorEmail: order.studentEmail,
+      actorRole: "student",
+      action: "payment_verified",
+      entityType: "order",
+      entityId: String(order._id),
+      entityName: order.orderId,
+      details: `Payment verified for ${order.orderId}`,
+      metadata: {
+        paymentReference: razorpayPaymentId,
+        paymentGateway: "razorpay",
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Payment verified successfully",
+      order,
+      billPdfUrl: finalization.billPdf?.publicUrl || order.billPdfUrl || null,
+      whatsappSent: Boolean(finalization.whatsappResult.success),
+      whatsappTarget: finalization.whatsappTarget || null,
+      whatsappMessage: finalization.whatsappResult.message || "",
+      whatsappError: finalization.whatsappResult.success
+        ? ""
+        : finalization.whatsappResult.error || finalization.whatsappResult.message || "",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to verify payment",
       error: error.message,
     });
   }
@@ -291,7 +601,7 @@ export const updateOrderStatus = async (req, res) => {
     const order = await Order.findOneAndUpdate(
       { orderId: req.params.orderId },
       updatePayload,
-      { new: true, runValidators: true }
+      { returnDocument: "after", runValidators: true }
     );
 
     if (!order) {
@@ -320,7 +630,7 @@ export const cancelOrder = async (req, res) => {
     const order = await Order.findOneAndUpdate(
       { orderId: req.params.orderId },
       { orderStatus: "Cancelled", updatedAt: new Date() },
-      { new: true, runValidators: true }
+      { returnDocument: "after", runValidators: true }
     );
 
     if (!order) {
@@ -352,19 +662,18 @@ export const sendOrderBillEmail = async (req, res) => {
       return res.status(404).json({ success: false, message: "Order not found" });
     }
 
-    const mailerConfig = getMailerConfig();
-    if (!mailerConfig) {
-      return res.status(400).json({
-        success: false,
-        message: "Email is not configured. Set EMAIL_USER and EMAIL_PASSWORD in backend/.env",
-      });
-    }
-
-    await sendEmail({
+    const mailResult = await sendEmail({
       to: order.studentEmail,
       subject: `Campus Crave Bill - ${order.orderId}`,
       html: buildOrderBillHtml(order),
     });
+
+    if (!mailResult?.success) {
+      return res.status(500).json({
+        success: false,
+        message: mailResult?.message || "Failed to send bill email",
+      });
+    }
 
     await recordActivity({
       actorName: order.stallOwner,
@@ -397,7 +706,7 @@ export const sendOrderBillWhatsApp = async (req, res) => {
       return res.status(404).json({ success: false, message: "Order not found" });
     }
 
-    const target = req.body?.phoneNumber || process.env.ADMIN_WHATSAPP_NUMBER || order.studentPhone;
+    const target = String(req.body?.phoneNumber || order.studentPhone || "").trim();
     if (!target) {
       return res.status(400).json({
         success: false,
@@ -412,8 +721,12 @@ export const sendOrderBillWhatsApp = async (req, res) => {
       console.error("PDF generation failed:", pdfError.message);
     }
 
+    const billLink = billPdf?.publicUrl || order.billPdfUrl || "";
+    const billUrlPublic = isPublicBillUrl(billLink);
+
     const result = await sendWhatsAppBill(target, order, {
       mediaUrl: billPdf?.publicUrl,
+      billLink,
     });
 
     order.whatsappSent = Boolean(result.success);
@@ -446,7 +759,8 @@ export const sendOrderBillWhatsApp = async (req, res) => {
       message: "WhatsApp bill sent successfully",
       whatsappTarget: target,
       messageId: result.messageId,
-      billPdfUrl: billPdf?.publicUrl || null,
+      billPdfUrl: billPdf?.publicUrl || order.billPdfUrl || null,
+      billUrlPublic,
     });
   } catch (error) {
     return res.status(500).json({
@@ -464,19 +778,80 @@ export const downloadOrderBillPdf = async (req, res) => {
       return res.status(404).json({ success: false, message: "Order not found" });
     }
 
-    const fileName = order.billPdfFileName || `${order.orderId}.pdf`;
-    const filePath = path.join(billsDir, fileName);
-
-    if (!fs.existsSync(filePath)) {
-      const regenerated = await createBillPdfFile(order);
-      order.billPdfFileName = regenerated.fileName;
-      order.billPdfUrl = regenerated.publicUrl;
-      await order.save();
-      return res.download(regenerated.filePath, `${order.orderId}.pdf`);
-    }
-
-    return res.download(filePath, `${order.orderId}.pdf`);
+    // Always regenerate so users always get latest bill UI template.
+    const regenerated = await createBillPdfFile(order);
+    order.billPdfFileName = regenerated.fileName;
+    order.billPdfUrl = regenerated.publicUrl;
+    await order.save();
+    return res.download(regenerated.filePath, `${order.orderId}.pdf`);
   } catch (error) {
     return res.status(500).json({ success: false, message: "Failed to download bill PDF", error: error.message });
+  }
+};
+
+export const submitOrderReview = async (req, res) => {
+  try {
+    const { rating, review } = req.body || {};
+    const numericRating = Number(rating);
+    const sanitizedReview = String(review || "").trim();
+
+    if (!Number.isInteger(numericRating) || numericRating < 1 || numericRating > 5) {
+      return res.status(400).json({
+        success: false,
+        message: "Rating must be an integer between 1 and 5",
+      });
+    }
+
+    if (sanitizedReview.length > 500) {
+      return res.status(400).json({
+        success: false,
+        message: "Review must be 500 characters or less",
+      });
+    }
+
+    const order = await Order.findOne({ orderId: req.params.orderId });
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    if (!["Completed", "Ready"].includes(String(order.orderStatus || ""))) {
+      return res.status(400).json({
+        success: false,
+        message: "Review can be submitted only after order is ready or completed",
+      });
+    }
+
+    order.studentRating = numericRating;
+    order.studentReview = sanitizedReview;
+    order.studentReviewedAt = new Date();
+    order.updatedAt = new Date();
+    await order.save();
+
+    await recordActivity({
+      actorName: order.studentName,
+      actorEmail: order.studentEmail,
+      actorRole: "student",
+      action: "order_review_submitted",
+      entityType: "order",
+      entityId: String(order._id),
+      entityName: order.orderId,
+      details: `Review submitted for ${order.orderId}`,
+      metadata: {
+        rating: numericRating,
+        hasReviewText: Boolean(sanitizedReview),
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Rating and review submitted successfully",
+      order,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to submit order review",
+      error: error.message,
+    });
   }
 };

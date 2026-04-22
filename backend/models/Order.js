@@ -91,6 +91,27 @@ const orderSchema = new mongoose.Schema({
     enum: ["Pending", "Completed", "Failed"],
     default: "Pending",
   },
+  paymentReference: {
+    type: String,
+    default: "",
+  },
+  paymentGateway: {
+    type: String,
+    enum: ["", "razorpay"],
+    default: "",
+  },
+  razorpayOrderId: {
+    type: String,
+    default: "",
+  },
+  razorpayPaymentId: {
+    type: String,
+    default: "",
+  },
+  razorpaySignature: {
+    type: String,
+    default: "",
+  },
   billPdfUrl: {
     type: String,
     default: "",
@@ -110,6 +131,22 @@ const orderSchema = new mongoose.Schema({
   whatsappError: {
     type: String,
     default: "",
+  },
+  studentRating: {
+    type: Number,
+    min: 1,
+    max: 5,
+    required: false,
+    default: null,
+  },
+  studentReview: {
+    type: String,
+    default: "",
+  },
+  studentReviewedAt: {
+    type: Date,
+    required: false,
+    default: null,
   },
 });
 

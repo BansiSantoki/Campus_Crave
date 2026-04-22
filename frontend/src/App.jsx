@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import StallOwnerRegister from "./pages/StallOwnerRegister";
+import RegisterChoice from "./pages/RegisterChoice";
 import ForgotPassword from "./pages/ForgotPassword";
 import StudentDashboard from "./pages/Students_pages/StudentDashboard";
 import StallDashboard from "./pages/Stall_Owner/StallDashboard";
@@ -19,6 +20,7 @@ import SalesSummary from "./pages/Stall_Owner/SalesSummary";
 import ManageStudents from "./pages/Admin/ManageStudents";
 import ManageStallOwners from "./pages/Admin/ManageStallOwners";
 import ManageStalls from "./pages/Admin/ManageStalls";
+import ManageCategories from "./pages/Admin/ManageCategories";
 import ViewReports from "./pages/Admin/ViewReports";
 
 export default function App() {
@@ -26,7 +28,8 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route path="/register" element={<RegisterChoice />} />
+        <Route path="/register/student" element={<Register />} />
         <Route path="/register/stall-owner" element={<StallOwnerRegister />} />
         <Route path="/forgot" element={<ForgotPassword />} />
         
@@ -35,6 +38,7 @@ export default function App() {
         <Route path="/manage-students" element={<ManageStudents />} />
         <Route path="/manage-stall-owners" element={<ManageStallOwners />} />
         <Route path="/manage-stalls" element={<ManageStalls />} />
+        <Route path="/manage-categories" element={<ManageCategories />} />
         <Route path="/view-reports" element={<ViewReports />} />
 
         {/* Student  */}

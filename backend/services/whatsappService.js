@@ -1,18 +1,73 @@
 // ❌ IMPORTANT: yaha dotenv dobara zaruri nahi hai (already server.js me hai)
+import dotenv from "dotenv";
+import path from "node:path";
+import { fileURLToPath } from "url";
 
-// Twilio credentials
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const whatsappNumber =
-  process.env.TWILIO_WHATSAPP_NUMBER || "whatsapp:+14155238886";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Twilio API URL
-const TWILIO_MESSAGES_URL = accountSid
-  ? `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`
-  : null;
+const ensureTwilioEnvLoaded = () => {
+  if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+    return;
+  }
+
+  dotenv.config({ path: path.join(__dirname, "..", ".env") });
+};
+
+const getTwilioConfig = () => {
+  ensureTwilioEnvLoaded();
+
+  const accountSid = String(process.env.TWILIO_ACCOUNT_SID || "").trim();
+  const authToken = String(process.env.TWILIO_AUTH_TOKEN || "").trim();
+  const whatsappNumber =
+    String(process.env.TWILIO_WHATSAPP_NUMBER || "").trim() || "whatsapp:+14155238886";
+
+  return {
+    accountSid,
+    authToken,
+    whatsappNumber,
+    messagesUrl: accountSid
+      ? `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`
+      : "",
+  };
+};
+
+const isPrivateIpv4 = (host) => {
+  if (!/^\d+\.\d+\.\d+\.\d+$/.test(host)) return false;
+
+  const [a, b] = host.split(".").map((part) => Number(part));
+  if (a === 10) return true;
+  if (a === 127) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+
+  return false;
+};
+
+export const isPublicBillUrl = (url, { requireHttps = false } = {}) => {
+  if (!url) return false;
+
+  try {
+    const parsed = new URL(url);
+    if (!["http:", "https:"].includes(parsed.protocol)) return false;
+    if (requireHttps && parsed.protocol !== "https:") return false;
+
+    const host = parsed.hostname.toLowerCase();
+    if (["localhost", "127.0.0.1", "::1"].includes(host)) return false;
+    if (isPrivateIpv4(host)) return false;
+
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const isPublicMediaUrl = (url) => {
+  return isPublicBillUrl(url, { requireHttps: true });
+};
 
 // ✅ Format bill (₹)
-const formatBillForWhatsApp = (order) => {
+const formatBillForWhatsApp = (order, options = {}) => {
   const money = (value) => `₹${Number(value || 0).toFixed(2)}`;
 
   const itemsList = order.items
@@ -42,6 +97,7 @@ ${
     ? `Special Instructions: ${order.specialInstructions}`
     : ""
 }
+${options.billLink ? `\nDownload Bill: ${options.billLink}` : ""}
 
 Thank you for ordering from Campus Crave! 🍕
 `;
@@ -49,22 +105,28 @@ Thank you for ordering from Campus Crave! 🍕
 
 // ✅ Format phone number
 const formatPhoneNumber = (phone) => {
-  let cleaned = phone.replace(/\D/g, "");
+  const raw = String(phone || "").trim();
+  let cleaned = raw.replace(/\D/g, "");
 
-  if (cleaned.length === 10) {
-    cleaned = "91" + cleaned;
-  } else if (!cleaned.startsWith("91")) {
-    cleaned = "91" + cleaned;
+  if (!cleaned) {
+    return "";
   }
 
-  return "whatsapp:+" + cleaned;
+  // For local 10-digit numbers, default to India prefix.
+  if (cleaned.length === 10) {
+    cleaned = `91${cleaned}`;
+  }
+
+  return `whatsapp:+${cleaned}`;
 };
 
 // ✅ MAIN FUNCTION
 export const sendWhatsAppBill = async (phoneNumber, order, options = {}) => {
   try {
+    const twilio = getTwilioConfig();
+
     // 🔴 Fix: proper check
-    if (!accountSid || !authToken) {
+    if (!twilio.accountSid || !twilio.authToken) {
       console.log("❌ Twilio credentials missing");
       return {
         success: false,
@@ -72,28 +134,36 @@ export const sendWhatsAppBill = async (phoneNumber, order, options = {}) => {
       };
     }
 
-    const formattedPhone = formatPhoneNumber(
-      phoneNumber || process.env.ADMIN_WHATSAPP_NUMBER
-    );
+    const formattedPhone = formatPhoneNumber(phoneNumber);
+    if (!formattedPhone) {
+      return {
+        success: false,
+        message: "Valid WhatsApp number not found for this user",
+      };
+    }
 
-    const billMessage = formatBillForWhatsApp(order);
+    const publicBillLink = isPublicBillUrl(options.billLink) ? options.billLink : "";
+
+    const billMessage = formatBillForWhatsApp(order, {
+      billLink: publicBillLink,
+    });
 
     const body = new URLSearchParams({
-      From: whatsappNumber,
+      From: twilio.whatsappNumber,
       To: formattedPhone,
       Body: billMessage,
     });
 
-    if (options.mediaUrl) {
+    if (isPublicMediaUrl(options.mediaUrl)) {
       body.append("MediaUrl", options.mediaUrl);
     }
 
-    const response = await fetch(TWILIO_MESSAGES_URL, {
+    const response = await fetch(twilio.messagesUrl, {
       method: "POST",
       headers: {
         Authorization:
           "Basic " +
-          Buffer.from(`${accountSid}:${authToken}`).toString("base64"),
+          Buffer.from(`${twilio.accountSid}:${twilio.authToken}`).toString("base64"),
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body,
@@ -103,7 +173,14 @@ export const sendWhatsAppBill = async (phoneNumber, order, options = {}) => {
 
     if (!response.ok) {
       console.error("❌ Twilio Error:", responseText);
-      throw new Error(responseText);
+      let cleanMessage = "Failed to send WhatsApp bill";
+      try {
+        const parsed = JSON.parse(responseText);
+        cleanMessage = parsed?.message || cleanMessage;
+      } catch {
+        cleanMessage = responseText || cleanMessage;
+      }
+      throw new Error(cleanMessage);
     }
 
     const message = JSON.parse(responseText);

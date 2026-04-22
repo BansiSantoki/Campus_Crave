@@ -5,12 +5,39 @@ export async function ensureAdminAccount() {
   const adminEmail = process.env.ADMIN_EMAIL || "admin@campus.com";
   const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
 
-  const existingAdmin = await Register.findOne({
-    role: "admin",
-    email: adminEmail,
-  });
+  const targetAccount = await Register.findOne({ email: adminEmail });
+
+  if (targetAccount) {
+    targetAccount.role = "admin";
+    targetAccount.password = adminPassword;
+    targetAccount.confirmPassword = adminPassword;
+    targetAccount.updatedAt = new Date();
+    await targetAccount.save();
+
+    await Register.deleteMany({
+      role: "admin",
+      email: { $ne: adminEmail },
+    });
+
+    console.log(`Promoted existing account to admin for ${adminEmail}`);
+    return;
+  }
+
+  const existingAdmin = await Register.findOne({ role: "admin" });
 
   if (existingAdmin) {
+    existingAdmin.email = adminEmail;
+    existingAdmin.password = adminPassword;
+    existingAdmin.confirmPassword = adminPassword;
+    existingAdmin.updatedAt = new Date();
+    await existingAdmin.save();
+
+    await Register.deleteMany({
+      role: "admin",
+      email: { $ne: adminEmail },
+    });
+
+    console.log(`Updated admin account to ${adminEmail}`);
     return;
   }
 

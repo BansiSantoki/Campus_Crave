@@ -2,8 +2,6 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "campus crave backend",
-  "license": "ISC",
-  "author": "",
   "type": "module",
   "main": "server.js",
   "scripts": {
@@ -12,18 +10,19 @@
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
-    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.0",
     "express": "^5.2.1",
     "express-validator": "^7.3.2",
     "mongoose": "^9.3.3",
     "multer": "^2.1.1",
-    "node-fetch": "^3.3.2",
-    "nodemailer": "^8.0.4",
-    "nodemon": "^3.1.14",
+    "nodemailer": "^8.0.5",
     "pdfkit": "^0.18.0",
-    "twilio": "^5.13.1",
-    "validator": "^13.15.26"
+    "razorpay": "^2.9.6",
+    "resend": "^6.12.0",
+    "twilio": "^5.13.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
   }
 }

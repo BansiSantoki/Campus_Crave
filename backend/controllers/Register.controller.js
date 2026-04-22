@@ -2,7 +2,11 @@ import Register from "../models/Register.js";
 import Stall from "../models/Stall.js";
 import MenuItem from "../models/MenuItem.js";
 import { recordActivity } from "../services/activityLogger.js";
-import { sendVerificationEmail } from "../config/mailer.js";
+import {
+  sendLoginNotificationEmail,
+  sendPasswordResetOtpEmail,
+  sendVerificationEmail,
+} from "../config/mailer.js";
 import { validationResult } from "express-validator";
 import bcrypt from "bcrypt";
 
@@ -93,7 +97,7 @@ export const updateRegistration = async (req, res) => {
 
 
     const updatedUser = await Register.findByIdAndUpdate(id, updateData, {
-      new: true,
+      returnDocument: "after",
       runValidators: true,
     }).select(
       "studentId firstName lastName fullname email phone department year role stallName profile_picture createdAt",
@@ -114,7 +118,7 @@ export const updateRegistration = async (req, res) => {
           cuisine: department || existingUser.department || "General",
           status: "Active",
         },
-        { upsert: true, new: true, setDefaultsOnInsert: true },
+        { upsert: true, returnDocument: "after", setDefaultsOnInsert: true },
       );
     }
 
@@ -245,10 +249,28 @@ export const register = async (req, res) => {
 
 
     await newUser.save();
+
+    const toBool = (value, fallback = true) => {
+      const normalized = String(value ?? "").trim().toLowerCase();
+      if (!normalized) return fallback;
+      return ["1", "true", "yes", "on"].includes(normalized);
+    };
+    const enforceRegistrationEmail = toBool(process.env.ENFORCE_REGISTRATION_EMAIL, true);
+
     const verificationResult = await sendVerificationEmail({
       ...newUser.toObject(),
       email: normalizedEmail,
     });
+
+    if (!verificationResult.success && enforceRegistrationEmail) {
+      await Register.findByIdAndDelete(newUser._id);
+      return res.status(503).json({
+        message:
+          verificationResult.message ||
+          "Registration failed because verification email could not be sent.",
+        verificationEmailSent: false,
+      });
+    }
 
     await Register.findByIdAndUpdate(newUser._id, {
       emailVerificationSentAt: verificationResult.success ? new Date() : null,
@@ -266,7 +288,7 @@ export const register = async (req, res) => {
           cuisine: department,
           status: "Active",
         },
-        { upsert: true, new: true, setDefaultsOnInsert: true },
+        { upsert: true, returnDocument: "after", setDefaultsOnInsert: true },
       );
     }
 
@@ -282,6 +304,7 @@ export const register = async (req, res) => {
       metadata: {
         role: newUser.role,
         verificationEmailSent: Boolean(verificationResult.success),
+        verificationEmailMessage: verificationResult.message || "",
       },
     });
     // In a real application, you would hash the password before saving and not return the user object directly
@@ -307,6 +330,15 @@ export const register = async (req, res) => {
     });
   } catch (error) {
     console.error("Error during registration:", error);
+    if (error?.code === 11000) {
+      const duplicateField = Object.keys(error.keyValue || {})[0];
+      const duplicateValue = duplicateField ? error.keyValue[duplicateField] : "value";
+      return res.status(400).json({
+        message: `${duplicateField || "Field"} already registered`,
+        field: duplicateField || null,
+        value: duplicateValue,
+      });
+    }
     res.status(500).json({ message: "Server error during registration" });
   }
 };
@@ -325,7 +357,6 @@ export const login = async (req, res) => {
     const { email, password } = req.body;
     const normalizedEmail = String(email || "").trim().toLowerCase();
 
-
     const user = await Register.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(401).json({ message: "Invalid email or password" });
@@ -343,7 +374,7 @@ export const login = async (req, res) => {
 
     await recordActivity({
       actorName: user.fullname,
-      actorEmail: normalizedEmail,
+      actorEmail: user.email,
       actorRole: user.role,
       action: "logged_in",
       entityType: "authentication",
@@ -353,9 +384,20 @@ export const login = async (req, res) => {
       metadata: { loginCount: user.loginCount },
     });
 
+    let loginEmailNotificationSent = false;
+    if (["student", "stall"].includes(String(user.role || "").toLowerCase())) {
+      try {
+        const mailResult = await sendLoginNotificationEmail(user.toObject ? user.toObject() : user);
+        loginEmailNotificationSent = Boolean(mailResult?.success);
+      } catch (mailError) {
+        console.error("Error sending login notification:", mailError?.message || mailError);
+      }
+    }
+
 
     res.status(200).json({
       message: "Login successful",
+      loginEmailNotificationSent,
       user: {
         id: user._id,
         studentId: user.studentId,
@@ -379,7 +421,7 @@ export const login = async (req, res) => {
   }
 };
 
-export const forgotPassword = async (req, res) => {
+export const changePassword = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res
@@ -388,7 +430,7 @@ export const forgotPassword = async (req, res) => {
   }
 
   try {
-    const { email, currentPassword, newPassword } = req.body;
+    const { email, currentPassword, newPassword, confirmPassword } = req.body;
     const normalizedEmail = String(email || "").trim().toLowerCase();
 
     const user = await Register.findOne({ email: normalizedEmail });
@@ -412,18 +454,153 @@ export const forgotPassword = async (req, res) => {
         .json({ message: "New password must be different from current password" });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ message: "Confirm password does not match" });
+    }
 
-    user.password = hashedPassword;
-    user.confirmPassword = hashedPassword;
+    // Assign plain password; model pre-save hook hashes it once.
+    user.password = newPassword;
+    user.confirmPassword = confirmPassword;
     user.updatedAt = new Date();
 
     await user.save();
 
     return res.status(200).json({ message: "Password updated successfully" });
   } catch (error) {
-    console.error("Error during forgot password:", error);
+    console.error("Error during change password:", error);
     return res.status(500).json({ message: "Server error during password update" });
+  }
+};
+
+export const requestForgotPasswordOtp = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res
+      .status(400)
+      .json({ errors: errors.array(), message: "Validation failed" });
+  }
+
+  try {
+    const { email } = req.body;
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+
+    const user = await Register.findOne({ email: normalizedEmail });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const now = new Date();
+    if (
+      user.passwordResetSentAt &&
+      now.getTime() - new Date(user.passwordResetSentAt).getTime() < 60 * 1000
+    ) {
+      return res.status(429).json({ message: "Please wait 1 minute before requesting a new OTP" });
+    }
+
+    const otp = `${Math.floor(100000 + Math.random() * 900000)}`;
+    const allowDevOtpFallback = false;
+
+    const mailResult = await sendPasswordResetOtpEmail(
+      user.toObject ? user.toObject() : user,
+      otp,
+    );
+
+    if (!mailResult?.success) {
+      if (!allowDevOtpFallback) {
+        return res.status(500).json({
+          message:
+            mailResult?.message ||
+            "OTP email could not be sent right now. Please contact admin or try again later.",
+          error: mailResult?.error || null,
+        });
+      }
+
+      console.warn(
+        "Forgot-password email failed; using development OTP fallback.",
+        mailResult?.error || mailResult?.message || "Unknown mail error",
+      );
+    }
+
+    user.passwordResetOtp = otp;
+    user.passwordResetOtpExpiresAt = new Date(now.getTime() + 10 * 60 * 1000);
+    user.passwordResetSentAt = now;
+    user.updatedAt = now;
+    await user.save();
+
+    if (!mailResult?.success && allowDevOtpFallback) {
+      return res.status(200).json({
+        message: "SMTP issue detected. Development OTP generated successfully.",
+        otpEmailSent: false,
+        developmentMode: true,
+        devOtp: otp,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Password reset OTP sent to your email",
+      otpEmailSent: true,
+    });
+  } catch (error) {
+    console.error("Error requesting forgot password OTP:", error);
+    return res.status(500).json({
+      message: error?.message || "Server error while sending OTP",
+    });
+  }
+};
+
+export const resetForgotPassword = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res
+      .status(400)
+      .json({ errors: errors.array(), message: "Validation failed" });
+  }
+
+  try {
+    const { email, otp, newPassword, confirmPassword } = req.body;
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+    const normalizedOtp = String(otp || "").trim();
+
+    const user = await Register.findOne({ email: normalizedEmail });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!user.passwordResetOtp || !user.passwordResetOtpExpiresAt) {
+      return res.status(400).json({ message: "OTP not requested. Please request OTP first" });
+    }
+
+    if (new Date(user.passwordResetOtpExpiresAt).getTime() < Date.now()) {
+      return res.status(400).json({ message: "OTP expired. Please request a new OTP" });
+    }
+
+    if (user.passwordResetOtp !== normalizedOtp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ message: "Confirm password does not match" });
+    }
+
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      return res
+        .status(400)
+        .json({ message: "New password must be different from current password" });
+    }
+
+    // Assign plain password; model pre-save hook hashes it once.
+    user.password = newPassword;
+    user.confirmPassword = confirmPassword;
+    user.passwordResetOtp = null;
+    user.passwordResetOtpExpiresAt = null;
+    user.updatedAt = new Date();
+
+    await user.save();
+
+    return res.status(200).json({ message: "Password reset successfully" });
+  } catch (error) {
+    console.error("Error resetting forgot password:", error);
+    return res.status(500).json({ message: "Server error while resetting password" });
   }
 };

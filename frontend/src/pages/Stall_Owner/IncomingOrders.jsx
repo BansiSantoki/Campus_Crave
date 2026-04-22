@@ -1,18 +1,90 @@
-import { Link, useNavigate} from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { clearCurrentUser, getCurrentUser, getDisplayName } from "../../utils/appData";
+import { fetchOrdersByStall } from "../../utils/orderApi";
+import { resolveStallForOwner } from "../../utils/stallApi";
 
 export default function IncomingOrders() {
-    const navigate = useNavigate();
-    const handleLogout = () => {
-  // Optional: remove login data
-  localStorage.removeItem("user");
+  const navigate = useNavigate();
+  const currentUser = getCurrentUser();
 
-  // Redirect to login page
-  navigate("/");
-};
+  const [stall, setStall] = useState(null);
+  const [stallLoading, setStallLoading] = useState(true);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [submitError, setSubmitError] = useState("");
+  const [lastSyncedAt, setLastSyncedAt] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadAssignedStall = async () => {
+      setStallLoading(true);
+      const resolvedStall = await resolveStallForOwner(currentUser);
+      if (!isMounted) {
+        return;
+      }
+      setStall(resolvedStall || null);
+      setStallLoading(false);
+    };
+
+    loadAssignedStall();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentUser?.email, currentUser?.stallName]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadOrders = async () => {
+      if (!stall?.id && !stall?._id) {
+        if (isMounted) {
+          setOrders([]);
+          setLoading(false);
+        }
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const result = await fetchOrdersByStall(String(stall._id || stall.id));
+        if (isMounted) {
+          setOrders(Array.isArray(result?.orders) ? result.orders : []);
+          setSubmitError("");
+          setLastSyncedAt(new Date());
+        }
+      } catch (error) {
+        if (isMounted) {
+          setOrders([]);
+          setSubmitError(error.message || "Failed to load incoming orders");
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadOrders();
+  const intervalId = setInterval(loadOrders, 5000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, [stall?.id, stall?._id]);
+
+  const handleLogout = () => {
+    clearCurrentUser();
+    navigate("/");
+  };
+
+  const ownerName = getDisplayName(currentUser);
+
   return (
     <div className="dashboard-container">
-
-      {/* Sidebar */}
       <aside className="sidebar">
         <div className="brand">
           <div className="brand-logo">CC</div>
@@ -31,32 +103,30 @@ export default function IncomingOrders() {
         </ul>
       </aside>
 
-
-      {/* MAIN */}
       <main className="main">
-
-        {/* Header */}
         <div className="header">
-          <h2>Incoming Orders</h2>
+          <div>
+            <h2>Incoming Orders</h2>
+            <span className="sub-text">
+              {lastSyncedAt ? `Live sync: ${lastSyncedAt.toLocaleTimeString()}` : "Live sync pending..."}
+            </span>
+          </div>
 
           <div className="user-box">
             <div className="user-details">
-              <p>South Indian Stall</p>
-              <span>Owner: Ravi Kumar</span>
+              <p>{stallLoading ? "Loading stall..." : stall?.stallName || "Assigned Stall"}</p>
+              <span>{`Owner: ${ownerName}`}</span>
             </div>
-
             <button className="logout" onClick={handleLogout}>Logout</button>
           </div>
         </div>
 
-
-        {/* Orders Table */}
         <div className="orders-box">
-
-          <h3>Incoming Orders</h3>
+          <h3>{`Incoming Orders (${orders.length})`}</h3>
+          {submitError && <p className="field-error">{submitError}</p>}
+          {loading && <p className="sub-text">Loading incoming orders...</p>}
 
           <table>
-
             <thead>
               <tr>
                 <th>ORDER ID</th>
@@ -65,66 +135,43 @@ export default function IncomingOrders() {
                 <th>QTY</th>
                 <th>PICKUP TIME</th>
                 <th>STATUS</th>
-                <th>ACTIONS</th>
+                <th>TOTAL</th>
               </tr>
             </thead>
 
             <tbody>
+              {orders.map((order) => (
+                <tr key={order.id}>
+                  <td>{order.id}</td>
+                  <td>{order.studentName}</td>
+                  <td>{order.items.map((item) => `${item.itemName || item.name} x${item.quantity}`).join(", ")}</td>
+                  <td>{order.totalItems || order.qty || 0}</td>
+                  <td>{order.pickupTime || "-"}</td>
+                  <td>
+                    <span
+                      className={`badge ${
+                        order.status === "Ready"
+                          ? "green"
+                          : order.status === "Preparing" || order.status === "New"
+                          ? "orange"
+                          : "gray"
+                      }`}
+                    >
+                      {order.status}
+                    </span>
+                  </td>
+                  <td>{`Rs. ${Number(order.totalAmount || 0).toFixed(2)}`}</td>
+                </tr>
+              ))}
 
-              <tr>
-                <td>ORD001</td>
-                <td>John Doe</td>
-                <td>Veg Burger, Cold Coffee</td>
-                <td>2</td>
-                <td>11:30 AM</td>
-                <td><span className="badge orange">Preparing</span></td>
-                <td>
-                  <button className="ready-btn">Mark Ready</button>
-                </td>
-              </tr>
-
-              <tr>
-                <td>ORD002</td>
-                <td>Jane Smith</td>
-                <td>Masala Dosa, Tea</td>
-                <td>2</td>
-                <td>12:00 PM</td>
-                <td><span className="badge blue">New</span></td>
-                <td>
-                  <button className="prepare-btn">Start Preparing</button>
-                </td>
-              </tr>
-
-              <tr>
-                <td>ORD003</td>
-                <td>Mike Johnson</td>
-                <td>Paneer Sandwich, Juice</td>
-                <td>2</td>
-                <td>11:45 AM</td>
-                <td><span className="badge orange">Preparing</span></td>
-                <td>
-                  <button className="ready-btn">Mark Ready</button>
-                </td>
-              </tr>
-
-              <tr>
-                <td>ORD004</td>
-                <td>Sarah Williams</td>
-                <td>Pasta, Soft Drink</td>
-                <td>2</td>
-                <td>12:15 PM</td>
-                <td><span className="badge blue">New</span></td>
-                <td>
-                  <button className="prepare-btn">Start Preparing</button>
-                </td>
-              </tr>
-
+              {!loading && orders.length === 0 && (
+                <tr>
+                  <td colSpan="7">No incoming orders right now.</td>
+                </tr>
+              )}
             </tbody>
-
           </table>
-
         </div>
-
       </main>
     </div>
   );
