@@ -63,7 +63,7 @@ export const isPublicBillUrl = (url, { requireHttps = false } = {}) => {
 };
 
 const isPublicMediaUrl = (url) => {
-  return isPublicBillUrl(url, { requireHttps: true });
+  return isPublicBillUrl(url);
 };
 
 // ✅ Format bill (₹)
@@ -143,6 +143,11 @@ export const sendWhatsAppBill = async (phoneNumber, order, options = {}) => {
     }
 
     const publicBillLink = isPublicBillUrl(options.billLink) ? options.billLink : "";
+    const mediaUrl = isPublicMediaUrl(options.mediaUrl)
+      ? options.mediaUrl
+      : isPublicMediaUrl(publicBillLink)
+        ? publicBillLink
+        : "";
 
     const billMessage = formatBillForWhatsApp(order, {
       billLink: publicBillLink,
@@ -154,8 +159,8 @@ export const sendWhatsAppBill = async (phoneNumber, order, options = {}) => {
       Body: billMessage,
     });
 
-    if (isPublicMediaUrl(options.mediaUrl)) {
-      body.append("MediaUrl", options.mediaUrl);
+    if (mediaUrl) {
+      body.append("MediaUrl", mediaUrl);
     }
 
     const response = await fetch(twilio.messagesUrl, {
@@ -190,7 +195,7 @@ export const sendWhatsAppBill = async (phoneNumber, order, options = {}) => {
     return {
       success: true,
       messageId: message.sid,
-      message: options.mediaUrl
+      message: mediaUrl
         ? "Bill sent successfully with PDF"
         : "Bill sent successfully",
     };
