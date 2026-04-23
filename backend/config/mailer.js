@@ -199,7 +199,8 @@ export function getPublicBaseUrl() {
 }
 
 export function getBillDownloadUrl(orderId) {
-	return `${getPublicBaseUrl()}/api/orders/${encodeURIComponent(orderId)}/bill`;
+	const baseUrl = String(getPublicBaseUrl() || "").replace(/\/+$/, "");
+	return `${baseUrl}/uploads/bills/${encodeURIComponent(orderId)}.pdf`;
 }
 
 export function createMailerTransport() {
