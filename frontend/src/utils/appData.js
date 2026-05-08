@@ -307,15 +307,15 @@ function normalizeCategory(category) {
 }
 
 const CATEGORY_ICON_MAP = {
-  "South Indian": "🥥",
+  "South Indian": "🥞",
   "North Indian": "🍛",
   Chinese: "🥡",
   "Fast Food": "🍔",
-  Beverages: "🥤",
-  Desserts: "🍰",
+  Beverages: "🧋",
+  Desserts: "🍨",
   "Healthy Bowls": "🥗",
   Bakery: "🥐",
-  "Street Food": "🌮",
+  "Street Food": "🧆",
   Combos: "🍱"
 };
 
@@ -473,6 +473,103 @@ const HARD_ITEM_IMAGE_HINTS = {
 // Example:
 // "onion uttapam": "https://your-cdn.com/onion-uttapam.jpg"
 const ITEM_IMAGE_URL_OVERRIDES = {
+  "gulab jamun": "/food_images/gulab_jambu.jpg",
+  "brownie sundae": "/food_images/Ice Cream.jpg",
+  "vanilla ice cream": "/food_images/Ice Cream.jpg",
+  "kulfi stick": "/food_images/Ice Cream.jpg",
+  "chocolate pastry": "/food_images/Ice Cream.jpg",
+  "rasmalai": "/food_images/Ice Cream.jpg",
+  "coffee": "/food_images/Coffee.jpg",
+  "cold coffee": "/food_images/Coffee.jpg",
+  "hazelnut cold coffee": "/food_images/Coffee.jpg",
+  "mango smoothie": "/food_images/Juice.jpg",
+  "orange juice": "/food_images/Juice.jpg",
+  "watermelon juice": "/food_images/Juice.jpg",
+  "banana shake": "/food_images/Juice.jpg",
+  "chocolate shake": "/food_images/Juice.jpg",
+  "buttermilk": "/food_images/Juice.jpg",
+  "burger": "/food_images/burger.jpg",
+  "classic veg burger": "/food_images/burger.jpg",
+  "cheese burger": "/food_images/burger.jpg",
+  "double patty burger": "/food_images/burger.jpg",
+  "crispy chicken burger": "/food_images/burger.jpg",
+  "burger combo": "/food_images/burger.jpg",
+  "pizza slice": "/food_images/Pizza Slice.jpg",
+  "margherita pizza slice": "/food_images/Pizza Slice.jpg",
+  "farmhouse pizza slice": "/food_images/Pizza Slice.jpg",
+  "chaat": "/food_images/Chaat.jpg",
+  "sprout chaat": "/food_images/Chaat.jpg",
+  "pani puri": "/food_images/Chaat.jpg",
+  "sev puri": "/food_images/Chaat.jpg",
+  "dahi puri": "/food_images/Chaat.jpg",
+  "pav bhaji": "/food_images/Chaat.jpg",
+  "samosa": "/food_images/Samosa.jpg",
+  "samosa chaat": "/food_images/Samosa.jpg",
+  "masala dosa": "/food_images/Masala Dosa.jpg",
+  "idli sambar": "/food_images/Idli.jpg",
+  "medu vada": "/food_images/Medu Vada.jpg",
+  "onion uttapam": "/food_images/Onion Uttapam.jpg",
+  "podi dosa": "/food_images/Masala Dosa.jpg",
+  "curd rice": "/food_images/Pongal.jpg",
+  "mini tiffin": "/food_images/Idli.jpg",
+  "lemon rice": "/food_images/Biryani.jpg",
+  "aloo paratha": "/food_images/Bread Butter.jpg",
+  "chole bhature": "/food_images/Bread Butter.jpg",
+  "rajma rice": "/food_images/Biryani.jpg",
+  "paneer roll": "/food_images/twister.jpg",
+  "dal makhani combo": "/food_images/Naan.jpg",
+  "kadai paneer": "/food_images/Butter Chicken.jpg",
+  "veg biryani": "/food_images/Biryani.jpg",
+  "butter naan pair": "/food_images/Naan.jpg",
+  "hakka noodles": "/food_images/Hakka Noodles.jpg",
+  "schezwan noodles": "/food_images/Hakka Noodles.jpg",
+  "veg fried rice": "/food_images/Fried Rice.jpg",
+  "paneer chilli": "/food_images/Fried Rice.jpg",
+  "veg manchurian": "/food_images/Fried Rice.jpg",
+  "spring roll": "/food_images/twister.jpg",
+  "triple schezwan rice": "/food_images/Fried Rice.jpg",
+  "honey chilli potato": "/food_images/twister.jpg",
+  "veg loaded sandwich": "/food_images/Bread Butter.jpg",
+  "paneer tikka sandwich": "/food_images/Bread Butter.jpg",
+  "veg momos": "/food_images/twister.jpg",
+  "fried momos": "/food_images/twister.jpg",
+  "noodles bowl": "/food_images/Hakka Noodles.jpg",
+  "manchurian rice": "/food_images/Fried Rice.jpg",
+  "hot dog": "/food_images/twister.jpg",
+  "paneer wrap": "/food_images/twister.jpg",
+  "chicken wrap": "/food_images/twister.jpg",
+  "taco pair": "/food_images/twister.jpg",
+  "nacho platter": "/food_images/twister.jpg",
+  "popcorn chicken": "/food_images/twister.jpg",
+};
+
+const PUBLIC_FOOD_IMAGE_URLS = {
+  "biryani": "/food_images/Biryani.jpg",
+  "bread butter": "/food_images/Bread Butter.jpg",
+  burger: "/food_images/burger.jpg",
+  "butter chicken": "/food_images/Butter Chicken.jpg",
+  chaat: "/food_images/Chaat.jpg",
+  coffee: "/food_images/Coffee.jpg",
+  "fried rice": "/food_images/Fried Rice.jpg",
+  gulab_jambu: "/food_images/gulab_jambu.jpg",
+  "gulab jamun": "/food_images/gulab_jambu.jpg",
+  "hakka noodles": "/food_images/Hakka Noodles.jpg",
+  "ice cream": "/food_images/Ice Cream.jpg",
+  idli: "/food_images/Idli.jpg",
+  juice: "/food_images/Juice.jpg",
+  "masala dosa": "/food_images/Masala Dosa.jpg",
+  "medu vada": "/food_images/Medu Vada.jpg",
+  "mysore masala dosa": "/food_images/Mysore Masala Dosa.jpg",
+  naan: "/food_images/Naan.jpg",
+  "onion uttapam": "/food_images/Onion Uttapam.jpg",
+  "pizza slice": "/food_images/Pizza Slice.jpg",
+  pongal: "/food_images/Pongal.jpg",
+  "rava dosa": "/food_images/Rava Dosa.jpg",
+  "sada dosa": "/food_images/Sada Dosa.jpg",
+  "salad bowl": "/food_images/Salad Bowl.jpg",
+  sambar: "/food_images/Sambar.jpg",
+  samosa: "/food_images/Samosa.jpg",
+  twister: "/food_images/twister.jpg",
 };
 
 function getSpecificImageQuery(name, category) {
@@ -506,12 +603,39 @@ function getImageOverrideUrl(name) {
   const key = String(name || "")
     .trim()
     .toLowerCase();
-  return ITEM_IMAGE_URL_OVERRIDES[key] || "";
+  if (ITEM_IMAGE_URL_OVERRIDES[key]) {
+    return ITEM_IMAGE_URL_OVERRIDES[key];
+  }
+
+  const normalizedKey = key.replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
+  if (PUBLIC_FOOD_IMAGE_URLS[normalizedKey]) {
+    return PUBLIC_FOOD_IMAGE_URLS[normalizedKey];
+  }
+
+  const compactKey = normalizedKey.replace(/\s+/g, "_");
+  if (PUBLIC_FOOD_IMAGE_URLS[compactKey]) {
+    return PUBLIC_FOOD_IMAGE_URLS[compactKey];
+  }
+
+  if (normalizedKey.includes("burger")) return PUBLIC_FOOD_IMAGE_URLS.burger;
+  if (normalizedKey.includes("coffee")) return PUBLIC_FOOD_IMAGE_URLS.coffee;
+  if (normalizedKey.includes("juice") || normalizedKey.includes("shake") || normalizedKey.includes("smoothie") || normalizedKey.includes("buttermilk")) return PUBLIC_FOOD_IMAGE_URLS.juice;
+  if (normalizedKey.includes("pizza")) return PUBLIC_FOOD_IMAGE_URLS["pizza slice"];
+  if (normalizedKey.includes("dosa")) return PUBLIC_FOOD_IMAGE_URLS["masala dosa"];
+  if (normalizedKey.includes("idli")) return PUBLIC_FOOD_IMAGE_URLS.idli;
+  if (normalizedKey.includes("vada")) return PUBLIC_FOOD_IMAGE_URLS["medu vada"];
+  if (normalizedKey.includes("uttapam")) return PUBLIC_FOOD_IMAGE_URLS["onion uttapam"];
+  if (normalizedKey.includes("biryani") || normalizedKey.includes("rice")) return PUBLIC_FOOD_IMAGE_URLS.biryani;
+  if (normalizedKey.includes("noodle")) return PUBLIC_FOOD_IMAGE_URLS["hakka noodles"];
+  if (normalizedKey.includes("fry") || normalizedKey.includes("manchurian")) return PUBLIC_FOOD_IMAGE_URLS["fried rice"];
+  if (normalizedKey.includes("chaat") || normalizedKey.includes("puri") || normalizedKey.includes("pav bhaji") || normalizedKey.includes("samosa")) return PUBLIC_FOOD_IMAGE_URLS.chaat;
+
+  return "";
 }
 
 function buildInlineFoodSvg({ label, category }) {
   const safeLabel = String(label || "Food").slice(0, 28);
-  const icon = CATEGORY_ICON_MAP[category] || "🍽";
+  const icon = CATEGORY_ICON_MAP[category] || "🍽️";
   return `data:image/svg+xml;utf8,${encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420" viewBox="0 0 640 420">
       <defs>
@@ -522,6 +646,8 @@ function buildInlineFoodSvg({ label, category }) {
       </defs>
       <rect width="640" height="420" fill="url(#g)"/>
       <rect x="28" y="28" width="584" height="364" rx="20" fill="rgba(255,255,255,0.70)"/>
+      <circle cx="320" cy="162" r="82" fill="#ffffff" opacity="0.92"/>
+      <circle cx="320" cy="162" r="58" fill="#dcfce7" opacity="0.9"/>
       <text x="50%" y="45%" dominant-baseline="middle" text-anchor="middle" font-family="Segoe UI, Arial" font-size="76">${icon}</text>
       <text x="50%" y="63%" dominant-baseline="middle" text-anchor="middle" font-family="Segoe UI, Arial" font-size="28" fill="#14532d">${safeLabel}</text>
     </svg>`,
@@ -557,9 +683,13 @@ function buildFoodImageUrl({ name, category }) {
   return `https://loremflickr.com/640/420/${tags}?lock=${seed}`;
 }
 
-function buildFoodFallbackUrl(category) {
+function buildFoodFallbackUrl(input) {
+  const rawName = typeof input === "object" ? input?.name : "";
+  const rawCategory = typeof input === "object" ? input?.category : input;
+  const category = String(rawCategory || "").trim();
+  const name = String(rawName || "").trim();
   return buildInlineFoodSvg({
-    label: CATEGORY_DISH_HINTS[category] || `${category || "Food"} Item`,
+    label: name || CATEGORY_DISH_HINTS[category] || `${category || "Food"} Item`,
     category,
   });
 }
@@ -620,6 +750,12 @@ function normalizeMenuItem(item) {
   const stableId = item?.id ?? item?._id ?? `${String(item?.stallId || item?.stall || "stall")}-${String(item?.name || "menu-item").toLowerCase().replace(/\s+/g, "-")}`;
   const stableStallId = item?.stallId ?? item?.stall?._id ?? item?.stall ?? 101;
   const overrideImage = getImageOverrideUrl(item?.name);
+  const fallbackImage = buildFoodImageUrl({
+    name: item?.name,
+    category: item?.category,
+    id: stableId,
+  });
+  const currentImage = String(item?.image || "").trim();
 
   return {
     ...item,
@@ -631,7 +767,7 @@ function normalizeMenuItem(item) {
     price: Number(item?.price ?? 50),
     description: item?.description ?? "Freshly prepared campus special.",
     status: item?.status ?? "Available",
-    image: overrideImage || String(item?.image || "").trim()
+    image: overrideImage || (needsImageRefresh(currentImage) ? fallbackImage : currentImage)
   };
 }
 
@@ -737,12 +873,25 @@ export function setCategories(categories) {
 }
 
 export function getCategoryIcon(category) {
-  return CATEGORY_ICON_MAP[category] || "🍽";
+  return CATEGORY_ICON_MAP[category] || "🍽️";
 }
 
 export function getFoodImage(menuItem) {
   if (!menuItem) return "";
-  return getFoodFallbackImage(menuItem.category || menuItem.name || "Food");
+  const currentImage = String(menuItem.image || "").trim();
+  const overrideImage = getImageOverrideUrl(menuItem.name);
+
+  if (overrideImage) {
+    return overrideImage;
+  }
+
+  return needsImageRefresh(currentImage)
+    ? buildFoodImageUrl({
+        name: menuItem.name,
+        category: menuItem.category,
+        id: menuItem.id,
+      })
+    : currentImage;
 }
 
 export function getFoodFallbackImage(category) {
@@ -760,7 +909,9 @@ export function getInlineFoodPlaceholder(category) {
         </linearGradient>
       </defs>
       <rect width="640" height="420" fill="url(#g)"/>
-      <text x="50%" y="45%" dominant-baseline="middle" text-anchor="middle" font-family="Segoe UI, Arial" font-size="52">🍽</text>
+      <circle cx="320" cy="160" r="72" fill="#ffffff" opacity="0.92"/>
+      <circle cx="320" cy="160" r="48" fill="#dcfce7" opacity="0.88"/>
+      <text x="50%" y="45%" dominant-baseline="middle" text-anchor="middle" font-family="Segoe UI Emoji, Segoe UI, Arial" font-size="52">🍽️</text>
       <text x="50%" y="60%" dominant-baseline="middle" text-anchor="middle" font-family="Segoe UI, Arial" font-size="22" fill="#1f5136">${label}</text>
     </svg>`
   )}`;

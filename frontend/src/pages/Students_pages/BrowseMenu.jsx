@@ -253,7 +253,10 @@ export default function BrowseMenu() {
                     alt={item.name}
                     loading="lazy"
                     onError={(e) => {
-                      e.currentTarget.src = getFoodFallbackImage(item.category);
+                      e.currentTarget.src = getFoodFallbackImage({
+                        name: item.name,
+                        category: item.category,
+                      });
                     }}
                   />
                 </div>

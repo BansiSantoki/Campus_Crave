@@ -62,7 +62,10 @@ export function normalizeOrder(order) {
 async function parseResponse(response) {
   const payload = await response.json();
   if (!response.ok || !payload?.success) {
-    throw new Error(payload?.message || "Request failed");
+    const backendError = [payload?.message, payload?.error, payload?.details]
+      .filter(Boolean)
+      .join(" - ");
+    throw new Error(backendError || "Request failed");
   }
   return payload;
 }
