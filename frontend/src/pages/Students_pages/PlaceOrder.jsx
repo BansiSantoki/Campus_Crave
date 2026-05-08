@@ -291,6 +291,10 @@ export default function PlaceOrder() {
       }
 
       if (isOnlinePaymentMethod) {
+        if (result.source && result.source !== "api") {
+          throw new Error("Online payment needs the backend order to be saved in MongoDB. Please start the backend server and make sure VITE_API_URL points to http://localhost:5000/api.");
+        }
+
         const scriptReady = await loadRazorpayCheckoutScript();
         if (!scriptReady) {
           throw new Error("Unable to load Razorpay checkout. Please try again.");
