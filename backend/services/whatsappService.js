@@ -66,7 +66,7 @@ const isPublicMediaUrl = (url) => {
   return isPublicBillUrl(url);
 };
 
-// ✅ Format bill (₹)
+
 const formatBillForWhatsApp = (order, options = {}) => {
   const money = (value) => `₹${Number(value || 0).toFixed(2)}`;
 
